@@ -1,0 +1,12 @@
+# Offline smoke configuration: deterministic fixture clients, no API keys,
+# no network calls. Use only to verify the pipeline end to end.
+seed: 13
+
+retrieval:
+  candidate_depth: 10
+  bm25_depth: 50
+  dense_depth: 50
+
+generation:
+  top_k: 5
+  max_context_chars: 4000

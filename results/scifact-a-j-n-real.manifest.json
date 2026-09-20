@@ -1,0 +1,130 @@
+{
+  "run_id": "scifact-a-j-n-real-20260920T123901Z",
+  "run_kind": "real",
+  "dataset": "scifact",
+  "branches": [
+    "A",
+    "J",
+    "N",
+    "T"
+  ],
+  "results_file": "results/scifact-a-j-n-real.jsonl",
+  "queries_total": 300,
+  "queries_in_file": 300,
+  "queries_skipped_this_run": 0,
+  "completed_at": "2026-09-20T16:57:20.070990+00:00",
+  "models": {
+    "embedding": "nvidia/nemotron-3-embed-1b",
+    "systemone_requested": "openjev-0.1",
+    "systemone_resolved": [
+      "openjev-0.1"
+    ],
+    "systemone_typesafe_requested": "typesafe/jev-1.13",
+    "systemone_typesafe_resolved": [
+      "typesafe-ai/jev"
+    ],
+    "reranker_requested": "nvidia/llama-nemotron-rerank-vl-1b-v2",
+    "reranker_resolved": [
+      "nvidia/llama-nemotron-rerank-vl-1b-v2"
+    ],
+    "generator": "diffusiongemma-26b"
+  },
+  "totals": {
+    "systemone_input_tokens": 4165608,
+    "systemone_typesafe_input_tokens": 2411716,
+    "systemone_typesafe_cost_usd": 0.0,
+    "nvidia_rerank_prompt_tokens": 2179282,
+    "systemone_requests": 300,
+    "systemone_typesafe_requests": 300
+  },
+  "dataset_meta": {
+    "dataset": "scifact",
+    "sources": [
+      "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip"
+    ],
+    "license": "Abstracts ODC-By 1.0; annotations CC BY 4.0 (SciFact / BEIR)",
+    "counts": {
+      "documents": 5183,
+      "queries": 300
+    },
+    "raw_sha256": {
+      "scifact.zip": "536e14446a0ba56ed1398ab1055f39fe852686ecad24a6306c80c490fa8e0165"
+    }
+  },
+  "config": {
+    "seed": 13,
+    "paths": {
+      "data_dir": "data",
+      "results_dir": "results",
+      "reports_dir": "reports"
+    },
+    "retrieval": {
+      "candidate_depth": 20,
+      "bm25_depth": 100,
+      "dense_depth": 100,
+      "rrf_k": 60,
+      "bm25": {
+        "k1": 1.5,
+        "b": 0.75
+      }
+    },
+    "models": {
+      "embedding": {
+        "provider": "nvidia",
+        "base_url": "https://integrate.api.nvidia.com/v1",
+        "api_key_env": "NVIDIA_API_KEY",
+        "name": "nvidia/nemotron-3-embed-1b",
+        "input_type": "query_passage",
+        "batch_size": 32,
+        "requests_per_minute": 40
+      },
+      "reranker_nvidia": {
+        "base_url": "https://ai.api.nvidia.com/v1",
+        "api_key_env": "NVIDIA_API_KEY",
+        "name": "nvidia/llama-nemotron-rerank-vl-1b-v2",
+        "requests_per_minute": 40
+      },
+      "systemone": {
+        "provider": "codiv",
+        "base_url": "https://api.codiv.ai",
+        "decisions_path": "/v1/systemone",
+        "api_key_env": "TYPESAFE_API_KEY",
+        "model": "openjev-0.1",
+        "instruction_template": "Passage [{index}] contains information that is needed to answer the question",
+        "max_passage_chars": 4000,
+        "max_state_chars": 200000,
+        "requests_per_minute": 600
+      },
+      "systemone_typesafe": {
+        "provider": "openrouter",
+        "base_url": "https://openrouter.ai/api",
+        "decisions_path": "/alpha/decisions",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "model": "typesafe/jev-1.13",
+        "instruction_template": "Passage [{index}] contains information that is needed to answer the question",
+        "max_passage_chars": 4000,
+        "max_state_chars": 200000,
+        "requests_per_minute": 300
+      },
+      "generator": {
+        "provider": "codiv",
+        "base_url": "https://api.codiv.ai/v1",
+        "api_key_env": "TYPESAFE_API_KEY",
+        "name": "diffusiongemma-26b",
+        "max_tokens": 400,
+        "temperature": 0.0,
+        "requests_per_minute": 600
+      }
+    },
+    "generation": {
+      "top_k": 5,
+      "max_context_chars": 6000
+    },
+    "safety": {
+      "max_systemone_requests": 20000,
+      "max_systemone_input_tokens": 90000000,
+      "max_typesafe_requests": 5000,
+      "max_typesafe_input_tokens": 16000000
+    }
+  }
+}

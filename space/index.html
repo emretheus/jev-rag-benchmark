@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenJev RAG Benchmark</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         margin: 0; padding: 2rem 1rem; line-height: 1.5; }
+  main { max-width: 1020px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+  h2 { font-size: 1.1rem; margin: 2rem 0 .5rem; }
+  p.note { opacity: .75; font-size: .9rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: .5rem 0 1rem; }
+  th, td { border: 1px solid rgba(128,128,128,.35); padding: .45rem .6rem; text-align: left; }
+  th { background: rgba(128,128,128,.12); }
+  tr:nth-child(even) td { background: rgba(128,128,128,.06); }
+  footer { margin-top: 2.5rem; font-size: .85rem; opacity: .75; }
+</style>
+</head>
+<body>
+<main>
+<h1>OpenJev RAG Benchmark</h1>
+<p class="note">Free English benchmark of an open System One model as a reranking and decision layer in RAG.</p>
+<h2>Reranking (frozen top-20 candidates)</h2>
+<table><thead><tr><th>Dataset</th><th>n</th><th>Method</th><th>nDCG@10</th><th>Recall@5</th><th>MRR@10</th><th>Rerank p50</th></tr></thead><tbody><tr><td>scifact</td><td>300</td><td>A — no reranker (hybrid order)</td><td>71.67%</td><td>79.67%</td><td>68.75%</td><td>0 ms</td></tr><tr><td>scifact</td><td>300</td><td>J — OpenJev 0.1 batch noul (Codiv)</td><td>63.92%</td><td>68.67%</td><td>62.59%</td><td>1220 ms</td></tr><tr><td>scifact</td><td>300</td><td>N — NVIDIA reranker</td><td>78.70%</td><td>87.33%</td><td>76.16%</td><td>307 ms</td></tr><tr><td>scifact</td><td>300</td><td>T — TypeSafe Jev 1.13 batch noul (real Jev)</td><td>79.29%</td><td>85.67%</td><td>77.03%</td><td>4044 ms</td></tr><tr><td>xquad-en</td><td>1190</td><td>A — no reranker (hybrid order)</td><td>98.11%</td><td>99.58%</td><td>97.60%</td><td>0 ms</td></tr><tr><td>xquad-en</td><td>1190</td><td>J — OpenJev 0.1 batch noul (Codiv)</td><td>98.03%</td><td>98.82%</td><td>97.65%</td><td>923 ms</td></tr><tr><td>xquad-en</td><td>1190</td><td>N — NVIDIA reranker</td><td>99.37%</td><td>99.66%</td><td>99.27%</td><td>409 ms</td></tr><tr><td>xquad-en</td><td>1190</td><td>T — TypeSafe Jev 1.13 batch noul (real Jev)</td><td>98.93%</td><td>99.66%</td><td>98.67%</td><td>4000 ms</td></tr></tbody></table>
+<h2>OpenJev calibration (candidate-level relevance probabilities)</h2>
+<table><thead><tr><th>Dataset</th><th>ECE (10 bin)</th><th>Brier</th><th>Top-1 accuracy</th><th>Top-1 confidence (correct)</th><th>Top-1 confidence (wrong)</th></tr></thead><tbody><tr><td>scifact</td><td>0.0906</td><td>0.0521</td><td>57.67%</td><td>0.606</td><td>0.514</td></tr><tr><td>xquad-en</td><td>0.0245</td><td>0.0086</td><td>96.72%</td><td>0.765</td><td>0.455</td></tr></tbody></table>
+<h2>Frozen-context answer generation (OpenJev top-5)</h2>
+<table><thead><tr><th>Dataset</th><th>Generator</th><th>Token F1</th><th>Exact match</th><th>F1 &gt;= 0.5</th><th>Abstention</th><th>Valid citations</th></tr></thead><tbody><tr><td>xquad-en</td><td>diffusiongemma-26b</td><td>31.89%</td><td>2.35%</td><td>19.16%</td><td>2.77%</td><td>99.85%</td></tr></tbody></table>
+<h2>RAG optimization mode (confidence-partitioned OpenJev, fixed t = 0.50)</h2>
+<table><thead><tr><th>Dataset</th><th>Threshold</th><th>A baseline nDCG@10</th><th>J always-on nDCG@10</th><th>G partitioned nDCG@10</th><th>Delta vs baseline</th><th>95% CI</th></tr></thead><tbody><tr><td>scifact</td><td>0.50</td><td>71.67%</td><td>63.92%</td><td>71.49%</td><td>-0.18 pts</td><td>-1.93 to +1.54</td></tr><tr><td>xquad-en</td><td>0.50</td><td>98.11%</td><td>98.03%</td><td>98.76%</td><td>+0.66 pts</td><td>+0.27 to +1.07</td></tr></tbody></table>
+<footer>Generated 2026-09-20 17:03 UTC. Real runs only; fixture runs are never published. OpenJev is an independent open-weights model served by Codiv; not affiliated with TypeSafe AI.</footer>
+</main>
+</body>
+</html>

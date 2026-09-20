@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this benchmark, please cite it using the metadata below."
+title: "System One RAG Benchmark (English): OpenJev vs TypeSafe Jev 1.13 vs NVIDIA"
+abstract: >-
+  A free, reproducible, framework-neutral English benchmark of System One
+  decision models inside a RAG pipeline, with frozen candidate pools, paired
+  bootstrap confidence intervals, calibration analysis, and confidence-gated
+  decision-layer modes.
+type: software
+license: MIT
+repository-code: "https://github.com/<you>/openjev-rag-benchmark"
+keywords:
+  - rag
+  - reranking
+  - benchmark
+  - system-one
+  - jev
+  - openjev
+  - calibration
+authors:
+  - name: "OpenJev RAG Benchmark contributors"
+date-released: "2026-09-20"

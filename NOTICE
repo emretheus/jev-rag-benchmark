@@ -1,0 +1,36 @@
+OpenJev RAG Benchmark
+=====================
+
+This project is an independent benchmark. It is not affiliated with, endorsed
+by, or sponsored by TypeSafe AI, Codiv, or NVIDIA. "Jev" is a model by TypeSafe
+AI. "OpenJev" is an independent open-weights System One model served by Codiv.
+Results published with this harness describe the exact model versions recorded
+in each run manifest and must not be generalized to other models.
+
+Prior work
+----------
+The experimental design (hybrid candidate retrieval, frozen candidate pools,
+reranker comparison, frozen-context answer generation, artifact manifests) was
+inspired by the MIT-licensed project "jev-rag-benchmark" by erendikmenn
+(https://github.com/erendikmenn/jev-rag-benchmark). No code was copied; this
+harness was written from scratch and targets English datasets and calibration
+analysis instead.
+
+Datasets
+--------
+- XQuAD (English): CC BY-SA 4.0. Artetxe et al., "On the Cross-lingual
+  Transferability of Monolingual Representations" (2020).
+  https://github.com/deepmind/xquad
+- SciFact / BEIR: abstracts under ODC-By 1.0, annotations under CC BY 4.0.
+  Wadden et al. (2020); Thakur et al., "BEIR" (2021).
+  https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip
+Raw and processed datasets are downloaded at runtime and are not committed to
+this repository.
+
+Services
+--------
+- Codiv: free public trial endpoint for the open System One model OpenJev.
+  https://codiv.ai/docs
+- NVIDIA NIM (build.nvidia.com): free trial tier used for embeddings, baseline
+  reranking, and answer generation. Trial terms apply; this benchmark is
+  research and testing use.

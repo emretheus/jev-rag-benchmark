@@ -1,0 +1,22 @@
+# Route the paid branch T (TypeSafe Jev) through Vercel AI Gateway instead of OpenRouter.
+#
+# Usage:
+#   export AI_GATEWAY_API_KEY=...   # Vercel dashboard > AI Gateway > API keys
+#   uv run openjev-rag --config configs/vercel.yaml add-branch \
+#     --results results/xquad-en-a-j-n-real.jsonl --branch T
+#
+# Vercel exposes the TypeSafe-compatible API at /typesafe/v1/systemone with the
+# same request/response shape as Codiv and TypeSafe direct, so no code changes
+# are needed. Model id and price are identical ($0.042/1M input, output free);
+# usage is billed through AI Gateway credits. Vercel's monthly free credit
+# covers a subset of models; evaluation models such as Jev are not guaranteed
+# to be in that subset.
+
+models:
+  systemone_typesafe:
+    provider: vercel
+    base_url: https://ai-gateway.vercel.sh/typesafe
+    decisions_path: /v1/systemone
+    api_key_env: AI_GATEWAY_API_KEY
+    model: typesafe-ai/jev
+    requests_per_minute: 60
