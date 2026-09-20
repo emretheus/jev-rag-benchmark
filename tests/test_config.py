@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from openjev_rag_bench.config import load_dotenv
+from jev_rag_bench.config import load_dotenv
 
 
 def test_load_dotenv_sets_missing_variables(tmp_path, monkeypatch):

@@ -247,8 +247,11 @@ def _cmd_add_branch(cfg: dict, args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="openjev-rag",
-        description="Free English RAG benchmark for the open System One model OpenJev.",
+        prog="jev-rag",
+        description=(
+            "Free English RAG benchmark for TypeSafe Jev 1.13 "
+            "(OpenJev and NVIDIA baselines)."
+        ),
     )
     parser.add_argument(
         "--config",

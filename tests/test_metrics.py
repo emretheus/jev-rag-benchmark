@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import math
 
-from openjev_rag_bench.metrics import (
+from jev_rag_bench.metrics import (
     bootstrap_ci,
     mrr_at_k,
     ndcg_at_k,
     paired_bootstrap_ci,
     recall_at_k,
 )
-from openjev_rag_bench.text import exact_match, normalize_answer, strip_citations, token_f1
+from jev_rag_bench.text import exact_match, normalize_answer, strip_citations, token_f1
 
 
 def test_recall_at_k():

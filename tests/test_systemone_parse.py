@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from openjev_rag_bench.clients.systemone import (
+from jev_rag_bench.clients.systemone import (
     SystemOneClient,
     build_state,
     extract_noul_probability,

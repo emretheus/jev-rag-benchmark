@@ -269,7 +269,7 @@ def _generation_summary(path: Path) -> dict:
 
 def _render_markdown(summary: dict) -> str:
     lines: list[str] = []
-    lines.append("# OpenJev RAG Benchmark report")
+    lines.append("# Jev RAG Benchmark report")
     lines.append("")
     if summary.get("run_kind") != "real":
         lines.append(FIXTURE_WARNING)

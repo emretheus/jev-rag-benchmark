@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from openjev_rag_bench.gate import (
+from jev_rag_bench.gate import (
     answerability_summary,
     gate_order,
     gating_summary,

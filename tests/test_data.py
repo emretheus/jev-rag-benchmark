@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from openjev_rag_bench.data import normalize_scifact, normalize_xquad
+from jev_rag_bench.data import normalize_scifact, normalize_xquad
 
 
 def test_normalize_xquad_extracts_documents_queries_and_answers():

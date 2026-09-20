@@ -2,7 +2,7 @@
 #
 # Usage:
 #   export AI_GATEWAY_API_KEY=...   # Vercel dashboard > AI Gateway > API keys
-#   uv run openjev-rag --config configs/vercel.yaml add-branch \
+#   uv run jev-rag --config configs/vercel.yaml add-branch \
 #     --results results/xquad-en-a-j-n-real.jsonl --branch T
 #
 # Vercel exposes the TypeSafe-compatible API at /typesafe/v1/systemone with the

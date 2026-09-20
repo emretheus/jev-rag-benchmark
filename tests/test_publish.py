@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from openjev_rag_bench.publish import (
+from jev_rag_bench.publish import (
     RESULTS_END,
     RESULTS_START,
     inject_into_readme,

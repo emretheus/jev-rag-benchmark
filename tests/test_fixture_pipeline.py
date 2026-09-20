@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 
-from openjev_rag_bench.config import default_config
-from openjev_rag_bench.data import write_processed
-from openjev_rag_bench.fixtures import FixtureGenerator
-from openjev_rag_bench.generate import load_rows, replay_generator
-from openjev_rag_bench.report import generate_report
-from openjev_rag_bench.retrieval import corpus_text
-from openjev_rag_bench.run import add_branch, run_benchmark
+from jev_rag_bench.config import default_config
+from jev_rag_bench.data import write_processed
+from jev_rag_bench.fixtures import FixtureGenerator
+from jev_rag_bench.generate import load_rows, replay_generator
+from jev_rag_bench.report import generate_report
+from jev_rag_bench.retrieval import corpus_text
+from jev_rag_bench.run import add_branch, run_benchmark
 
 CORPUS = [
     {

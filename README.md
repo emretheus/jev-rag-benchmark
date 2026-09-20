@@ -1,8 +1,10 @@
-# System One RAG Benchmark (English)
+# Jev RAG Benchmark (English): Jev 1.13 vs OpenJev vs NVIDIA
 
-A free, reproducible, framework-neutral benchmark of **System One decision
-models inside a RAG pipeline** — on English data, with frozen candidate pools,
-paired confidence intervals, and calibration analysis.
+A free, reproducible, framework-neutral benchmark of **TypeSafe Jev 1.13 as the
+decision and reranking layer of a RAG pipeline** — on English data, with frozen
+candidate pools, paired confidence intervals, and calibration analysis. The
+free open-weights OpenJev model and a NVIDIA cross-encoder are compared on the
+identical candidate pools.
 
 It answers one question honestly: **does the model actually improve the system?**
 
@@ -28,13 +30,13 @@ after the first ranking run. Everything is reported with that label.
 
 ## Results
 
-Auto-generated from real runs by `uv run openjev-rag publish`. Never
+Auto-generated from real runs by `uv run jev-rag publish`. Never
 hand-edited; fixture runs are refused.
 
 <!-- RESULTS:START -->
 
-_Generated 2026-09-20 17:03 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
-_Regenerate with:_ `uv run openjev-rag publish`
+_Generated 2026-09-20 17:09 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
+_Regenerate with:_ `uv run jev-rag publish`
 
 ### Reranking (frozen top-20 candidates, same pool for every method)
 
@@ -103,7 +105,7 @@ frozen contexts so a fresh retrieval draw cannot contaminate it.
 Branch T is added to existing results without re-running the free branches:
 
 ```bash
-uv run openjev-rag --config configs/vercel.yaml add-branch \
+uv run jev-rag --config configs/vercel.yaml add-branch \
   --results results/xquad-en-a-j-n-real.jsonl --branch T --concurrency 4
 ```
 
@@ -113,26 +115,26 @@ uv run openjev-rag --config configs/vercel.yaml add-branch \
 uv sync --extra dev
 cp .env.example .env          # add keys: Codiv (free), NVIDIA (free). OpenRouter/Vercel only for branch T.
 
-uv run openjev-rag doctor
-uv run openjev-rag data prepare --dataset all
-uv run openjev-rag estimate --dataset xquad-en        # zero API calls
+uv run jev-rag doctor
+uv run jev-rag data prepare --dataset all
+uv run jev-rag estimate --dataset xquad-en        # zero API calls
 
 # retrieval + reranking branches A, J, N
-uv run openjev-rag run --dataset xquad-en --branches A,J,N
+uv run jev-rag run --dataset xquad-en --branches A,J,N
 
 # frozen-context answer generation on the OpenJev top-5
-uv run openjev-rag generate --results results/xquad-en-a-j-n-real.jsonl --branch J
+uv run jev-rag generate --results results/xquad-en-a-j-n-real.jsonl --branch J
 
 # report + README table + shareable artifacts
-uv run openjev-rag report --results results/xquad-en-a-j-n-real.jsonl \
+uv run jev-rag report --results results/xquad-en-a-j-n-real.jsonl \
   --generation results/xquad-en-a-j-n-real-gen-j-real.jsonl
-uv run openjev-rag publish --space-dir space
+uv run jev-rag publish --space-dir space
 ```
 
 Offline pipeline check (no keys, no network, deterministic stand-ins):
 
 ```bash
-uv run openjev-rag run --dataset xquad-en --branches A,J,N --fixture --limit 25
+uv run jev-rag run --dataset xquad-en --branches A,J,N --fixture --limit 25
 ```
 
 Fixture runs are marked `run_kind=fixture` everywhere and are never published.
@@ -140,18 +142,18 @@ Fixture runs are marked `run_kind=fixture` everywhere and are never published.
 ## Reproduce the published results
 
 ```bash
-uv run openjev-rag data prepare --dataset all
-uv run openjev-rag run --dataset xquad-en --branches A,J,N
-uv run openjev-rag run --dataset scifact --branches A,J,N
-uv run openjev-rag generate --results results/xquad-en-a-j-n-real.jsonl --branch J
-uv run openjev-rag --config configs/vercel.yaml add-branch \
+uv run jev-rag data prepare --dataset all
+uv run jev-rag run --dataset xquad-en --branches A,J,N
+uv run jev-rag run --dataset scifact --branches A,J,N
+uv run jev-rag generate --results results/xquad-en-a-j-n-real.jsonl --branch J
+uv run jev-rag --config configs/vercel.yaml add-branch \
   --results results/xquad-en-a-j-n-real.jsonl --branch T
-uv run openjev-rag --config configs/vercel.yaml add-branch \
+uv run jev-rag --config configs/vercel.yaml add-branch \
   --results results/scifact-a-j-n-real.jsonl --branch T
-uv run openjev-rag report --results results/xquad-en-a-j-n-real.jsonl \
+uv run jev-rag report --results results/xquad-en-a-j-n-real.jsonl \
   --generation results/xquad-en-a-j-n-real-gen-j-real.jsonl
-uv run openjev-rag report --results results/scifact-a-j-n-real.jsonl
-uv run openjev-rag publish --space-dir space
+uv run jev-rag report --results results/scifact-a-j-n-real.jsonl
+uv run jev-rag publish --space-dir space
 ```
 
 ## Metrics
@@ -205,11 +207,11 @@ Compared with [`erendikmenn/jev-rag-benchmark`](https://github.com/erendikmenn/j
 ## Publishing
 
 ```bash
-uv run openjev-rag publish --space-dir space --repo-url https://github.com/<you>/<repo>
+uv run jev-rag publish --space-dir space --repo-url https://github.com/<you>/<repo>
 uv sync --extra hf && export HF_TOKEN=hf_...
-uv run openjev-rag publish --push --repo-id <you>/openjev-rag-benchmark --repo-type dataset
-uv run openjev-rag publish --space-dir space \
-  --push --repo-id <you>/openjev-rag-benchmark-leaderboard --repo-type space
+uv run jev-rag publish --push --repo-id <you>/jev-rag-benchmark --repo-type dataset
+uv run jev-rag publish --space-dir space \
+  --push --repo-id <you>/jev-rag-benchmark-leaderboard --repo-type space
 ```
 
 Mint a DOI for the release with Zenodo (free) and cite it here.
@@ -219,7 +221,7 @@ Mint a DOI for the release with Zenodo (free) and cite it here.
 - XQuAD (English): CC BY-SA 4.0.
 - SciFact / BEIR: abstracts ODC-By 1.0, annotations CC BY 4.0.
 
-Raw data is downloaded by `openjev-rag data prepare` and is git-ignored.
+Raw data is downloaded by `jev-rag data prepare` and is git-ignored.
 
 ## Limitations
 

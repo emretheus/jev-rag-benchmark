@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from openjev_rag_bench.calibration import (
+from jev_rag_bench.calibration import (
     brier_score,
     expected_calibration_error,
     reliability_table,

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenJev RAG Benchmark</title>
+<title>Jev RAG Benchmark</title>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -21,7 +21,7 @@
 </head>
 <body>
 <main>
-<h1>OpenJev RAG Benchmark</h1>
+<h1>Jev RAG Benchmark</h1>
 <p class="note">Free English benchmark of an open System One model as a reranking and decision layer in RAG.</p>
 <h2>Reranking (frozen top-20 candidates)</h2>
 <table><thead><tr><th>Dataset</th><th>n</th><th>Method</th><th>nDCG@10</th><th>Recall@5</th><th>MRR@10</th><th>Rerank p50</th></tr></thead><tbody><tr><td>scifact</td><td>300</td><td>A — no reranker (hybrid order)</td><td>71.67%</td><td>79.67%</td><td>68.75%</td><td>0 ms</td></tr><tr><td>scifact</td><td>300</td><td>J — OpenJev 0.1 batch noul (Codiv)</td><td>63.92%</td><td>68.67%</td><td>62.59%</td><td>1220 ms</td></tr><tr><td>scifact</td><td>300</td><td>N — NVIDIA reranker</td><td>78.70%</td><td>87.33%</td><td>76.16%</td><td>307 ms</td></tr><tr><td>scifact</td><td>300</td><td>T — TypeSafe Jev 1.13 batch noul (real Jev)</td><td>79.29%</td><td>85.67%</td><td>77.03%</td><td>4044 ms</td></tr><tr><td>xquad-en</td><td>1190</td><td>A — no reranker (hybrid order)</td><td>98.11%</td><td>99.58%</td><td>97.60%</td><td>0 ms</td></tr><tr><td>xquad-en</td><td>1190</td><td>J — OpenJev 0.1 batch noul (Codiv)</td><td>98.03%</td><td>98.82%</td><td>97.65%</td><td>923 ms</td></tr><tr><td>xquad-en</td><td>1190</td><td>N — NVIDIA reranker</td><td>99.37%</td><td>99.66%</td><td>99.27%</td><td>409 ms</td></tr><tr><td>xquad-en</td><td>1190</td><td>T — TypeSafe Jev 1.13 batch noul (real Jev)</td><td>98.93%</td><td>99.66%</td><td>98.67%</td><td>4000 ms</td></tr></tbody></table>
@@ -31,7 +31,7 @@
 <table><thead><tr><th>Dataset</th><th>Generator</th><th>Token F1</th><th>Exact match</th><th>F1 &gt;= 0.5</th><th>Abstention</th><th>Valid citations</th></tr></thead><tbody><tr><td>xquad-en</td><td>diffusiongemma-26b</td><td>31.89%</td><td>2.35%</td><td>19.16%</td><td>2.77%</td><td>99.85%</td></tr></tbody></table>
 <h2>RAG optimization mode (confidence-partitioned OpenJev, fixed t = 0.50)</h2>
 <table><thead><tr><th>Dataset</th><th>Threshold</th><th>A baseline nDCG@10</th><th>J always-on nDCG@10</th><th>G partitioned nDCG@10</th><th>Delta vs baseline</th><th>95% CI</th></tr></thead><tbody><tr><td>scifact</td><td>0.50</td><td>71.67%</td><td>63.92%</td><td>71.49%</td><td>-0.18 pts</td><td>-1.93 to +1.54</td></tr><tr><td>xquad-en</td><td>0.50</td><td>98.11%</td><td>98.03%</td><td>98.76%</td><td>+0.66 pts</td><td>+0.27 to +1.07</td></tr></tbody></table>
-<footer>Generated 2026-09-20 17:03 UTC. Real runs only; fixture runs are never published. OpenJev is an independent open-weights model served by Codiv; not affiliated with TypeSafe AI.</footer>
+<footer>Generated 2026-09-20 17:09 UTC. Real runs only; fixture runs are never published. OpenJev is an independent open-weights model served by Codiv; not affiliated with TypeSafe AI.</footer>
 </main>
 </body>
 </html>

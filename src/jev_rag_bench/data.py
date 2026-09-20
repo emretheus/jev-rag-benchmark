@@ -176,7 +176,7 @@ def load_processed(dataset: str, data_root: Path) -> tuple[list[dict], list[dict
     if not corpus_path.exists() or not queries_path.exists():
         raise FileNotFoundError(
             f"processed dataset '{dataset}' not found; "
-            f"run: openjev-rag data prepare --dataset {dataset}"
+            f"run: jev-rag data prepare --dataset {dataset}"
         )
     docs = [
         json.loads(line)

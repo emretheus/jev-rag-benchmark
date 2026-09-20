@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from openjev_rag_bench.bm25 import BM25
-from openjev_rag_bench.retrieval import reciprocal_rank_fusion
+from jev_rag_bench.bm25 import BM25
+from jev_rag_bench.retrieval import reciprocal_rank_fusion
 
 
 def test_bm25_ranks_relevant_document_first():
