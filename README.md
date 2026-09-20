@@ -11,7 +11,10 @@ It answers one question honestly: **does the model actually improve the system?*
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Cost](https://img.shields.io/badge/benchmark%20cost-%240-brightgreen)
-![Tests](https://img.shields.io/badge/tests-41%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-42%20passing-brightgreen)
+[![HF Space](https://img.shields.io/badge/%F0%9F%A4%97%20Space-live%20leaderboard-yellow)](https://huggingface.co/spaces/emretheus/jev-rag-benchmark-leaderboard)
+[![HF Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-raw%20artifacts-orange)](https://huggingface.co/datasets/emretheus/jev-rag-benchmark)
+[![Collection](https://img.shields.io/badge/%F0%9F%A4%97%20Collection-Jev%20RAG%20Benchmark-purple)](https://huggingface.co/collections/emretheus/jev-rag-benchmark-6ab0196d6122dd2c2876e906)
 
 ## Key findings (2026-09-20)
 
@@ -35,7 +38,7 @@ hand-edited; fixture runs are refused.
 
 <!-- RESULTS:START -->
 
-_Generated 2026-09-20 17:34 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
+_Generated 2026-09-20 17:35 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
 _Regenerate with:_ `uv run jev-rag publish`
 
 ### Reranking (frozen top-20 candidates, same pool for every method)
