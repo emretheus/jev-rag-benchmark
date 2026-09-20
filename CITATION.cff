@@ -8,7 +8,7 @@ abstract: >-
   decision-layer modes.
 type: software
 license: MIT
-repository-code: "https://github.com/<you>/openjev-rag-benchmark"
+repository-code: "https://github.com/emretheus/openjev-rag-benchmark"
 keywords:
   - rag
   - reranking
