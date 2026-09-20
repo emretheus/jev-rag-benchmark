@@ -427,7 +427,7 @@ def render_dataset_card(summaries: list[dict], repo_url: str | None = None) -> s
         "license: mit",
         "language:",
         "  - en",
-        f"pretty_name: Jev RAG Benchmark (English): {datasets}",
+        f'pretty_name: "Jev RAG Benchmark (English): {datasets}"',
         "size_categories:",
         "  - n<10K",
         "task_categories:",

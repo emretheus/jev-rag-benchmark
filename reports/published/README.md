@@ -2,7 +2,7 @@
 license: mit
 language:
   - en
-pretty_name: Jev RAG Benchmark (English): scifact, xquad-en
+pretty_name: "Jev RAG Benchmark (English): scifact, xquad-en"
 size_categories:
   - n<10K
 task_categories:
