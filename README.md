@@ -35,7 +35,7 @@ hand-edited; fixture runs are refused.
 
 <!-- RESULTS:START -->
 
-_Generated 2026-09-20 17:09 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
+_Generated 2026-09-20 17:34 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
 _Regenerate with:_ `uv run jev-rag publish`
 
 ### Reranking (frozen top-20 candidates, same pool for every method)

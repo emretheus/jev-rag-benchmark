@@ -6,6 +6,7 @@ from jev_rag_bench.publish import (
     RESULTS_END,
     RESULTS_START,
     inject_into_readme,
+    render_dataset_card,
     render_readme_block,
     render_text_tables,
     stage_published,
@@ -100,7 +101,18 @@ def test_write_space_creates_static_page(tmp_path):
     index_path = write_space(tmp_path / "space", [REAL_SUMMARY], repo_url="https://github.com/x/y")
     html_text = index_path.read_text(encoding="utf-8")
     assert "xquad-en" in html_text
-    assert "sdk: static" in (tmp_path / "space" / "README.md").read_text(encoding="utf-8")
+    space_readme = (tmp_path / "space" / "README.md").read_text(encoding="utf-8")
+    assert "sdk: static" in space_readme
+    assert "short_description" in space_readme
+
+
+def test_dataset_card_has_metadata_and_results():
+    card = render_dataset_card([REAL_SUMMARY], repo_url="https://github.com/x/y")
+    assert card.startswith("---\n")
+    assert "license: mit" in card
+    assert "language:" in card
+    assert "98.10%" in card
+    assert "https://github.com/x/y" in card
 
 
 def test_render_text_tables_is_plain_text():

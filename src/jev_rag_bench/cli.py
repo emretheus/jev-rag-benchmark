@@ -207,7 +207,7 @@ def _cmd_publish(cfg: dict, args: argparse.Namespace) -> int:
     print(f"README updated: {args.readme}")
 
     published_dir = Path(cfg["paths"]["reports_dir"]) / "published"
-    stage_published(published_dir, summaries, summary_paths)
+    stage_published(published_dir, summaries, summary_paths, repo_url=args.repo_url)
     print(f"published artifacts: {published_dir}")
 
     if args.space_dir:
