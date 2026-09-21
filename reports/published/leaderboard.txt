@@ -1,24 +1,22 @@
-Jev RAG Benchmark - real runs - generated 2026-09-20 17:35 UTC
+Jev RAG Benchmark - real runs - generated 2026-09-21 20:38 UTC
 
 Reranking (frozen top-20 candidates)
-Dataset   n     Method                                       nDCG@10  Recall@5  MRR@10  p50    
---------  ----  -------------------------------------------  -------  --------  ------  -------
-scifact   300   A — no reranker (hybrid order)               71.67%   79.67%    68.75%  0 ms   
-scifact   300   J — OpenJev 0.1 batch noul (Codiv)           63.92%   68.67%    62.59%  1220 ms
-scifact   300   N — NVIDIA reranker                          78.70%   87.33%    76.16%  307 ms 
-scifact   300   T — TypeSafe Jev 1.13 batch noul (real Jev)  79.29%   85.67%    77.03%  4044 ms
-xquad-en  1190  A — no reranker (hybrid order)               98.11%   99.58%    97.60%  0 ms   
-xquad-en  1190  J — OpenJev 0.1 batch noul (Codiv)           98.03%   98.82%    97.65%  923 ms 
-xquad-en  1190  N — NVIDIA reranker                          99.37%   99.66%    99.27%  409 ms 
-xquad-en  1190  T — TypeSafe Jev 1.13 batch noul (real Jev)  98.93%   99.66%    98.67%  4000 ms
+Dataset   n     Method                             nDCG@10  Recall@5  MRR@10  p50    
+--------  ----  ---------------------------------  -------  --------  ------  -------
+scifact   300   A — no reranker (hybrid order)     71.67%   79.67%    68.75%  0 ms   
+scifact   300   T — TypeSafe Jev 1.13 batch noul   79.29%   85.67%    77.03%  4044 ms
+scifact   300   N — NVIDIA cross-encoder reranker  78.70%   87.33%    76.16%  307 ms 
+xquad-en  1190  A — no reranker (hybrid order)     98.11%   99.58%    97.60%  0 ms   
+xquad-en  1190  T — TypeSafe Jev 1.13 batch noul   98.93%   99.66%    98.67%  4000 ms
+xquad-en  1190  N — NVIDIA cross-encoder reranker  99.37%   99.66%    99.27%  409 ms 
 
-OpenJev calibration (candidate-level)
-Dataset   ECE     Brier   Top-1 acc  Conf correct  Conf wrong
---------  ------  ------  ---------  ------------  ----------
-scifact   0.0906  0.0521  57.67%     0.606         0.514     
-xquad-en  0.0245  0.0086  96.72%     0.765         0.455     
+Probability calibration (candidate-level)
+Dataset   Model                         ECE     Brier   Top-1 acc  Conf correct  Conf wrong
+--------  ----------------------------  ------  ------  ---------  ------------  ----------
+scifact   TypeSafe Jev 1.13 batch noul  0.0625  0.0366  71.00%     0.812         0.549     
+xquad-en  TypeSafe Jev 1.13 batch noul  0.0133  0.0045  97.90%     0.960         0.740     
 
 Frozen-context answer generation
-Dataset   Generator           F1      EM     F1>=0.5  Abstain  Citations
---------  ------------------  ------  -----  -------  -------  ---------
-xquad-en  diffusiongemma-26b  31.89%  2.35%  19.16%   2.77%    99.85%   
+Dataset   Contexts  Generator           F1      EM     F1>=0.5  Abstain  Citations
+--------  --------  ------------------  ------  -----  -------  -------  ---------
+xquad-en  T         diffusiongemma-26b  30.58%  1.26%  17.31%   2.61%    99.85%   

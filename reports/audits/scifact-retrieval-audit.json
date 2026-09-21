@@ -1,0 +1,59 @@
+{
+  "dataset": "scifact",
+  "n_queries": 300,
+  "corpus_size": 5183,
+  "bm25": [
+    {
+      "depth": 5,
+      "found": 223,
+      "recall": 0.7433333333333333
+    },
+    {
+      "depth": 20,
+      "found": 253,
+      "recall": 0.8433333333333334
+    },
+    {
+      "depth": 50,
+      "found": 264,
+      "recall": 0.88
+    },
+    {
+      "depth": 100,
+      "found": 269,
+      "recall": 0.8966666666666666
+    },
+    {
+      "depth": "all",
+      "found": 269,
+      "recall": 0.8966666666666666
+    }
+  ],
+  "hybrid": [
+    {
+      "depth": 5,
+      "found": 239,
+      "recall": 0.7966666666666666
+    },
+    {
+      "depth": 20,
+      "found": 270,
+      "recall": 0.9
+    },
+    {
+      "depth": 50,
+      "found": 283,
+      "recall": 0.9433333333333334
+    },
+    {
+      "depth": 100,
+      "found": 292,
+      "recall": 0.9733333333333334
+    },
+    {
+      "depth": "all",
+      "found": 294,
+      "recall": 0.98
+    }
+  ]
+}

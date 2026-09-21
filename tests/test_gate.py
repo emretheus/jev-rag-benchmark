@@ -20,7 +20,7 @@ def _row(
         "gold_doc_ids": [gold],
         "branches": {
             "A": {"order": a_order, "probs": None},
-            "J": {"order": j_order, "probs": probs},
+            "T": {"order": j_order, "probs": probs},
         },
     }
 

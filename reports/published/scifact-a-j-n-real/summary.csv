@@ -1,5 +1,0 @@
-branch,method,n,ndcg@10,recall@5,recall@10,mrr@10,latency_p50_ms,latency_p95_ms,mean_input_tokens,total_input_tokens
-A,no reranker (hybrid order),300,0.716716,0.796667,0.843333,0.687549,0.000,0.000,0.0,0
-J,OpenJev 0.1 batch noul (Codiv),300,0.639169,0.686667,0.746667,0.625872,1219.722,1529.802,13885.4,4165608
-N,NVIDIA reranker,300,0.787033,0.873333,0.900000,0.761581,306.851,409.428,7264.3,2179282
-T,TypeSafe Jev 1.13 batch noul (real Jev),300,0.792904,0.856667,0.900000,0.770251,4043.525,54208.701,8039.1,2411716

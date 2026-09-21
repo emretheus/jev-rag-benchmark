@@ -1,0 +1,59 @@
+{
+  "dataset": "xquad-en",
+  "n_queries": 1190,
+  "corpus_size": 240,
+  "bm25": [
+    {
+      "depth": 5,
+      "found": 1175,
+      "recall": 0.9873949579831933
+    },
+    {
+      "depth": 20,
+      "found": 1183,
+      "recall": 0.9941176470588236
+    },
+    {
+      "depth": 50,
+      "found": 1185,
+      "recall": 0.9957983193277311
+    },
+    {
+      "depth": 100,
+      "found": 1186,
+      "recall": 0.9966386554621849
+    },
+    {
+      "depth": "all",
+      "found": 1186,
+      "recall": 0.9966386554621849
+    }
+  ],
+  "hybrid": [
+    {
+      "depth": 5,
+      "found": 1185,
+      "recall": 0.9957983193277311
+    },
+    {
+      "depth": 20,
+      "found": 1186,
+      "recall": 0.9966386554621849
+    },
+    {
+      "depth": 50,
+      "found": 1190,
+      "recall": 1.0
+    },
+    {
+      "depth": 100,
+      "found": 1190,
+      "recall": 1.0
+    },
+    {
+      "depth": "all",
+      "found": 1190,
+      "recall": 1.0
+    }
+  ]
+}

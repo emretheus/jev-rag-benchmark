@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 
 from . import data as data_module
+from .audit import load_audits, retrieval_audit, write_audit
 from .bm25 import BM25
+from .charts import render_charts
 from .clients.systemone import build_state
 from .config import api_key, load_config, load_dotenv
 from .generate import ChatGenerator, load_rows, replay_generator
@@ -26,7 +28,7 @@ from .run import add_branch, build_clients, run_benchmark
 
 CODIV_FREE_QUOTA_TOKENS = 100_000_000
 
-MODEL_SECTIONS = ("embedding", "reranker_nvidia", "systemone", "systemone_typesafe", "generator")
+MODEL_SECTIONS = ("embedding", "reranker_nvidia", "systemone", "generator")
 
 
 def _cmd_doctor(cfg: dict, _args: argparse.Namespace) -> int:
@@ -174,7 +176,12 @@ def _cmd_report(cfg: dict, args: argparse.Namespace) -> int:
         if args.output_dir
         else Path(cfg["paths"]["reports_dir"]) / "generated" / results_path.stem
     )
-    report_path = generate_report(results_path, output_dir, generation_path=args.generation)
+    report_path = generate_report(
+        results_path,
+        output_dir,
+        generation_path=args.generation or None,
+        pricing=cfg.get("pricing"),
+    )
     print(f"report: {report_path}")
     print(f"summary: {output_dir / 'summary.json'}")
     return 0
@@ -245,12 +252,127 @@ def _cmd_add_branch(cfg: dict, args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_audit(cfg: dict, args: argparse.Namespace) -> int:
+    try:
+        audit = retrieval_audit(cfg, args.dataset, limit=args.limit)
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    audits_dir = Path(cfg["paths"]["reports_dir"]) / "audits"
+    json_path, md_path = write_audit(audit, audits_dir)
+    print(f"queries: {audit['n_queries']} | corpus: {audit['corpus_size']}")
+    print("| depth | BM25 | hybrid |")
+    print("|---|---|---|")
+    for bm25_row, hybrid_row in zip(audit["bm25"], audit["hybrid"], strict=False):
+        label = f"top-{bm25_row['depth']}" if bm25_row["depth"] != "all" else "all"
+        print(
+            f"| {label} | {bm25_row['recall'] * 100:.3f}% | {hybrid_row['recall'] * 100:.3f}% |"
+        )
+    print(f"audit: {json_path}")
+    print(f"summary: {md_path}")
+    return 0
+
+
+def _cmd_charts(cfg: dict, args: argparse.Namespace) -> int:
+    reports_dir = Path(args.reports_dir) if args.reports_dir else (
+        Path(cfg["paths"]["reports_dir"]) / "generated"
+    )
+    summary_paths = sorted(reports_dir.glob("*/summary.json"))
+    if not summary_paths:
+        print(f"error: no summary.json files under {reports_dir}", file=sys.stderr)
+        return 1
+    from .publish import load_summaries
+
+    summaries = load_summaries(summary_paths)
+    audits_dir = Path(args.audits_dir) if args.audits_dir else (
+        Path(cfg["paths"]["reports_dir"]) / "audits"
+    )
+    written = render_charts(
+        summaries,
+        args.output_dir,
+        audits=load_audits(audits_dir),
+        png=not args.no_png,
+        social_dir=args.social_dir,
+    )
+    for path in written:
+        print(f"chart: {path}")
+    return 0
+
+
+def _cmd_stability(cfg: dict, args: argparse.Namespace) -> int:
+    from .stability import stability_audit, write_stability
+
+    run_kind = "fixture" if args.fixture else "real"
+    try:
+        audit = stability_audit(
+            cfg,
+            args.results,
+            branch=args.branch.upper(),
+            limit=args.limit,
+            permutations=args.permutations,
+            concurrency=args.concurrency,
+            run_kind=run_kind,
+        )
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    output_dir = Path(cfg["paths"]["reports_dir"]) / "audits"
+    json_path, md_path = write_stability(audit, output_dir)
+    print(
+        f"mean Spearman {audit['mean_spearman']:.3f} | "
+        f"mean top-5 Jaccard {audit['mean_top5_jaccard']:.3f} | "
+        f"gold membership changes {audit['queries_with_gold_membership_change']}"
+        f"/{audit['queries']}"
+    )
+    print(f"audit: {json_path}")
+    print(f"summary: {md_path}")
+    return 0
+
+
+def _cmd_verify(cfg: dict, args: argparse.Namespace) -> int:
+    from .verify import summarize_verification, verify_generations
+
+    run_kind = "fixture" if args.fixture else "real"
+    try:
+        path = verify_generations(
+            cfg,
+            args.results,
+            args.generation,
+            branch=args.branch.upper(),
+            limit=args.limit,
+            concurrency=args.concurrency,
+            run_kind=run_kind,
+        )
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    summary = summarize_verification(path)
+    output_dir = Path(cfg["paths"]["reports_dir"]) / "audits"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = output_dir / f"{Path(args.results).stem}-verification-summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    if summary:
+        print(
+            f"n={summary['n']} | mean p(correct)={summary['mean_probability_correct']:.3f} | "
+            f"mean p(wrong)={summary['mean_probability_wrong']:.3f} | AUC={summary['auc']:.3f}"
+        )
+        for row in summary["sweep"]:
+            print(
+                f"  t={row['threshold']:.1f}: coverage {row['coverage'] * 100:.1f}% | "
+                f"precision {row['precision_correct'] * 100:.1f}% | "
+                f"wrong answers flagged {row['wrong_answers_flagged']}"
+                f"/{row['wrong_answers_total']}"
+            )
+    print(f"summary: {summary_path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="jev-rag",
         description=(
             "Free English RAG benchmark for TypeSafe Jev 1.13 "
-            "(OpenJev and NVIDIA baselines)."
+            "(no-reranker and NVIDIA baselines)."
         ),
     )
     parser.add_argument(
@@ -301,8 +423,48 @@ def build_parser() -> argparse.ArgumentParser:
 
     report_parser = subparsers.add_parser("report", help="build a markdown report and summary")
     report_parser.add_argument("--results", required=True)
-    report_parser.add_argument("--generation", default=None)
+    report_parser.add_argument(
+        "--generation",
+        action="append",
+        default=[],
+        help="generation JSONL to merge; repeat for multiple branches",
+    )
     report_parser.add_argument("--output-dir", default=None)
+
+    audit_parser = subparsers.add_parser(
+        "audit", help="candidate-depth audit: BM25 vs hybrid gold-passage recall"
+    )
+    audit_parser.add_argument("--dataset", required=True, choices=data_module.ALL_DATASETS)
+    audit_parser.add_argument("--limit", type=int, default=None)
+
+    charts_parser = subparsers.add_parser(
+        "charts", help="render benchmark charts (SVG, plus PNG via headless Chrome)"
+    )
+    charts_parser.add_argument("--reports-dir", default=None)
+    charts_parser.add_argument("--audits-dir", default=None)
+    charts_parser.add_argument("--output-dir", default="assets/benchmark")
+    charts_parser.add_argument("--social-dir", default="assets/social")
+    charts_parser.add_argument("--no-png", action="store_true")
+
+    stability_parser = subparsers.add_parser(
+        "stability", help="candidate-order stability audit for the Jev branch"
+    )
+    stability_parser.add_argument("--results", required=True)
+    stability_parser.add_argument("--branch", default="T")
+    stability_parser.add_argument("--limit", type=int, default=100)
+    stability_parser.add_argument("--permutations", type=int, default=3)
+    stability_parser.add_argument("--concurrency", type=int, default=4)
+    stability_parser.add_argument("--fixture", action="store_true")
+
+    verify_parser = subparsers.add_parser(
+        "verify", help="verify generated answers against their cited passages with Jev"
+    )
+    verify_parser.add_argument("--results", required=True)
+    verify_parser.add_argument("--generation", required=True)
+    verify_parser.add_argument("--branch", default="T")
+    verify_parser.add_argument("--limit", type=int, default=None)
+    verify_parser.add_argument("--concurrency", type=int, default=4)
+    verify_parser.add_argument("--fixture", action="store_true")
 
     publish_parser = subparsers.add_parser(
         "publish", help="update the README results table and stage shareable artifacts"
@@ -338,6 +500,10 @@ def main(argv: list[str] | None = None) -> int:
         "generate": _cmd_generate,
         "add-branch": _cmd_add_branch,
         "report": _cmd_report,
+        "audit": _cmd_audit,
+        "charts": _cmd_charts,
+        "stability": _cmd_stability,
+        "verify": _cmd_verify,
         "publish": _cmd_publish,
     }
     return handlers[args.command](cfg, args)

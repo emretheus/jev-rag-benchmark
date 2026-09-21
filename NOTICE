@@ -1,11 +1,11 @@
-OpenJev RAG Benchmark
-=====================
+Jev RAG Benchmark
+=================
 
 This project is an independent benchmark. It is not affiliated with, endorsed
-by, or sponsored by TypeSafe AI, Codiv, or NVIDIA. "Jev" is a model by TypeSafe
-AI. "OpenJev" is an independent open-weights System One model served by Codiv.
-Results published with this harness describe the exact model versions recorded
-in each run manifest and must not be generalized to other models.
+by, or sponsored by TypeSafe AI, Codiv, Vercel, or NVIDIA. "Jev" is a model by
+TypeSafe AI. Results published with this harness describe the exact model
+versions recorded in each run manifest and must not be generalized to other
+models.
 
 Prior work
 ----------
@@ -13,8 +13,8 @@ The experimental design (hybrid candidate retrieval, frozen candidate pools,
 reranker comparison, frozen-context answer generation, artifact manifests) was
 inspired by the MIT-licensed project "jev-rag-benchmark" by erendikmenn
 (https://github.com/erendikmenn/jev-rag-benchmark). No code was copied; this
-harness was written from scratch and targets English datasets and calibration
-analysis instead.
+harness was written from scratch and targets English datasets, calibration
+analysis, and free-tier reproducibility.
 
 Datasets
 --------
@@ -29,8 +29,10 @@ this repository.
 
 Services
 --------
-- Codiv: free public trial endpoint for the open System One model OpenJev.
-  https://codiv.ai/docs
-- NVIDIA NIM (build.nvidia.com): free trial tier used for embeddings, baseline
-  reranking, and answer generation. Trial terms apply; this benchmark is
-  research and testing use.
+- Vercel AI Gateway: TypeSafe-compatible endpoint used for the real Jev branch.
+  https://vercel.com/docs/ai-gateway
+- NVIDIA NIM (build.nvidia.com): free trial tier used for embeddings, the
+  baseline cross-encoder, and (in earlier revisions) answer generation.
+  Trial terms apply; this benchmark is research and testing use.
+- Codiv: free public trial endpoint used for answer generation with
+  DiffusionGemma 26B. https://codiv.ai/docs

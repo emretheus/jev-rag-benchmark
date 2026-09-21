@@ -46,10 +46,11 @@ def extract_noul_probability(answer: dict) -> float:
 
 
 class SystemOneClient:
-    """System One client for any Jev-compatible decisions endpoint.
+    """System One client for Jev-compatible decisions endpoints.
 
-    Works with Codiv (`/v1/systemone`, OpenJev) and OpenRouter
-    (`/alpha/decisions`, TypeSafe Jev 1.13) by configurable base_url + path.
+    Works with the Vercel AI Gateway TypeSafe-compatible API
+    (`/typesafe/v1/systemone`) and OpenRouter (`/alpha/decisions`) through a
+    configurable base_url + decisions_path.
     """
 
     def __init__(
@@ -79,6 +80,15 @@ class SystemOneClient:
             headers=extra_headers,
         )
 
+    def ask(self, state: str, questions: dict) -> tuple[dict, str, int, float]:
+        payload = {"model": self.model, "state": state, "questions": questions}
+        started = time.perf_counter()
+        data = self.http.post_json(self.decisions_path, payload)
+        latency_ms = (time.perf_counter() - started) * 1000.0
+        usage = data.get("usage") or {}
+        input_tokens = int(usage.get("input_tokens", usage.get("prompt_tokens", 0)))
+        return data, str(data.get("model", self.model)), input_tokens, latency_ms
+
     def score_relevance(self, question: str, passages: list[str]) -> SystemOneResult:
         if not passages:
             return SystemOneResult([], self.model, 0, 0.0, 0)
@@ -95,21 +105,17 @@ class SystemOneClient:
             }
             for index in range(len(passages))
         }
-        payload = {"model": self.model, "state": state, "questions": questions}
-        started = time.perf_counter()
-        data = self.http.post_json(self.decisions_path, payload)
-        latency_ms = (time.perf_counter() - started) * 1000.0
+        data, resolved_model, input_tokens, latency_ms = self.ask(state, questions)
         answers = data.get("answers") or {}
         probabilities = [
             extract_noul_probability(answers.get(f"passage_{index}") or {})
             for index in range(len(passages))
         ]
         usage = data.get("usage") or {}
-        input_tokens = int(usage.get("input_tokens", usage.get("prompt_tokens", 0)))
         cost = usage.get("cost")
         return SystemOneResult(
             probabilities=probabilities,
-            resolved_model=str(data.get("model", self.model)),
+            resolved_model=resolved_model,
             input_tokens=input_tokens,
             latency_ms=latency_ms,
             state_chars=len(state),

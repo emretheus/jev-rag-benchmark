@@ -1,32 +1,32 @@
 # Benchmark protocol (preregistered)
 
 This protocol is frozen before the published English runs. Changes after the
-first published run must be recorded in a changelog section at the bottom and
+first published run must be recorded in the changelog section at the bottom and
 must not silently rewrite published numbers.
 
 ## Research questions
 
 1. **RQ1 (retrieval ceiling).** Is the gold passage inside the frozen hybrid
    candidate pool, and how does the ceiling depend on candidate depth?
-2. **RQ2 (reranking quality).** Does OpenJev batch noul reranking improve
+2. **RQ2 (reranking quality).** Does Jev 1.13 batch noul reranking improve
    Recall@5, nDCG@10, and MRR@10 over the unreranked hybrid order, and how does
-   it compare with a dedicated cross-encoder reranker (NVIDIA)?
-3. **RQ3 (calibration).** Are OpenJev's noul probabilities calibrated for
-   candidate relevance (Brier, ECE, reliability), and can a confidence
-   threshold trade coverage for precision predictably (risk-coverage)?
-4. **RQ4 (generation).** Given frozen OpenJev top-5 contexts, how well does a
+   it compare with a dedicated cross-encoder (NVIDIA)?
+3. **RQ3 (calibration).** Are Jev's noul probabilities calibrated for candidate
+   relevance (Brier, ECE, reliability), and can a confidence threshold trade
+   coverage for precision predictably (risk-coverage)?
+4. **RQ4 (generation).** Given frozen Jev top-5 contexts, how well does a
    free-tier generative model answer extractive English questions (F1, EM,
    abstention, citation validity)?
 5. **RQ5 (cost/latency).** What are observed p50/p95 latencies and token costs
-   of each stage on free tiers?
+   of each stage on free tiers, and what would they cost at list price?
 
 ## Hypotheses
 
-- H1: OpenJev reranking improves nDCG@10 over branch A by at least 1 point on
-  XQuAD-EN, with a paired bootstrap 95% CI excluding zero.
-- H2: OpenJev is not equal to the cross-encoder on nDCG@10; we report the sign
-  and CI either way. "OpenJev wins" is not assumed.
-- H3: OpenJev probabilities are positively associated with relevance
+- H1: Jev reranking improves nDCG@10 over branch A by at least 1 point on
+  SciFact, with a paired bootstrap 95% CI excluding zero.
+- H2: Jev is not assumed to beat the cross-encoder; the sign and CI are
+  reported either way.
+- H3: Jev probabilities are positively associated with relevance
   (top-1 confidence when correct > when incorrect).
 - H4: A confidence threshold exists whose precision exceeds the base rate by at
   least 2x at non-trivial coverage.
@@ -43,27 +43,23 @@ must not silently rewrite published numbers.
 | Role | Model | Provider |
 |---|---|---|
 | Embedding (hybrid first stage) | `nvidia/nemotron-3-embed-1b` | NVIDIA NIM |
-| Tested reranker | `openjev-0.1` | Codiv |
+| Tested reranker | `typesafe-ai/jev` (= Jev 1.13) | Vercel AI Gateway (free tier at run time) or OpenRouter |
 | Baseline reranker | `nvidia/llama-nemotron-rerank-vl-1b-v2` | NVIDIA NIM |
 | Answer generator | `diffusiongemma-26b` (configurable) | Codiv |
-| Paid comparison (branch T, optional) | `typesafe-ai/jev` (= Jev 1.13) | Vercel AI Gateway (free tier) or OpenRouter |
 
 Model availability notes (recorded 2026-09-20): NVIDIA retired the text-only
-reranker (`llama-nemotron-rerank-1b-v2`), the embedding model, and the initial
-generator model on 2026-08-25/26. This protocol uses the live replacements.
-The generator is DiffusionGemma 26B, the same base model OpenJev is built from;
-this is a free-tier limitation and is disclosed in every report.
-
-Resolved model ids are recorded per row; a run with a different resolved id
-must be reported as such.
+reranker (`llama-nemotron-rerank-1b-v2`), the previous embedding model, and the
+initial generator model on 2026-08-25/26. This protocol uses the live
+replacements. The generator is a separate free-tier model; generation consumes
+frozen contexts, so retrieval and reranking metrics are unaffected by it.
 
 ## Procedure
 
 1. Normalize datasets; record raw SHA-256 hashes in the manifest.
 2. Build hybrid retrieval: BM25 top-100 + dense top-100, RRF (k=60), take
    top-20 as the frozen candidate pool.
-3. Run branches A, J, N on the identical pool.
-4. Freeze branch J's top-5 contexts and replay the generator (resumable,
+3. Run branches A, T, N on the identical pool.
+4. Freeze branch T's top-5 contexts and replay the generator (resumable,
    concurrency 4, retries on transient errors).
 5. Compute metrics and paired bootstrap CIs (5,000 resamples, seed 13).
 
@@ -92,11 +88,10 @@ must be reported as such.
   the confidence-partitioned decision mode was analyzed on the same data with a
   fixed threshold of 0.5: candidates with p >= 0.5 are reranked first, the rest
   keep the hybrid order. Results are exploratory, not confirmatory, until
-  replicated on a fresh dataset or a different first stage. The finding is
-  reported with this label everywhere it appears.
-- 2026-09-20: **E3 added post-hoc (exploratory).** Branch T (real TypeSafe
-  Jev 1.13) was added to the frozen candidate pools of both datasets through
-  Vercel AI Gateway (free tier at time of run; `typesafe-ai/jev`, resolved
-  model recorded per row). Full sets were run (1,190 + 300 queries), paired
-  bootstrap CIs computed. The comparison between OpenJev and real Jev is
-  exploratory until replicated with a fresh candidate draw.
+  replicated on a fresh dataset or a different first stage.
+- 2026-09-21: **E3 added post-hoc (exploratory).** Answerability gating:
+  generation is skipped when the top-1 probability is below a threshold; call
+  savings and answer quality are reported per threshold.
+- 2026-09-21: **Scope narrowed to Jev 1.13** (branches A/T/N). The earlier
+  open-weights comparison model was removed from the published benchmark; the
+  harness supports additional branches through `add-branch`.

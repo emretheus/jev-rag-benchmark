@@ -22,16 +22,13 @@ def build_clients(cfg: dict, run_kind: str, branches: list[str] | None = None) -
         return {
             "embeddings": FixtureEmbeddings(),
             "systemone": FixtureSystemOne(),
-            "systemone_typesafe": FixtureSystemOne(),
             "reranker": FixtureReranker(),
             "generator": FixtureGenerator(),
         }
 
     needed = ["embedding", "reranker_nvidia", "generator"]
-    if "J" in branches:
-        needed.append("systemone")
     if "T" in branches:
-        needed.append("systemone_typesafe")
+        needed.append("systemone")
     sections = {key: cfg["models"][key] for key in needed}
 
     missing = sorted(
@@ -70,14 +67,14 @@ def build_clients(cfg: dict, run_kind: str, branches: list[str] | None = None) -
             base_url=cfg["models"]["generator"]["base_url"],
             max_tokens=int(cfg["models"]["generator"].get("max_tokens", 400)),
             temperature=float(cfg["models"]["generator"].get("temperature", 0.0)),
-            requests_per_minute=float(cfg["models"]["generator"].get("requests_per_minute", 40)),
+            requests_per_minute=float(cfg["models"]["generator"].get("requests_per_minute", 600)),
         ),
         "systemone": None,
-        "systemone_typesafe": None,
     }
 
-    def _systemone_client(section: dict) -> SystemOneClient:
-        return SystemOneClient(
+    if "T" in branches:
+        section = cfg["models"]["systemone"]
+        clients["systemone"] = SystemOneClient(
             section["base_url"],
             api_key(section),
             section["model"],
@@ -85,13 +82,8 @@ def build_clients(cfg: dict, run_kind: str, branches: list[str] | None = None) -
             decisions_path=section.get("decisions_path", "/v1/systemone"),
             max_passage_chars=int(section.get("max_passage_chars", 4000)),
             max_state_chars=int(section.get("max_state_chars", 200000)),
-            requests_per_minute=float(section.get("requests_per_minute", 600)),
+            requests_per_minute=float(section.get("requests_per_minute", 60)),
         )
-
-    if "J" in branches:
-        clients["systemone"] = _systemone_client(cfg["models"]["systemone"])
-    if "T" in branches:
-        clients["systemone_typesafe"] = _systemone_client(cfg["models"]["systemone_typesafe"])
     return clients
 
 
@@ -164,7 +156,6 @@ def run_benchmark(
     processed = 0
     skipped = 0
     systemone_tokens = 0
-    typesafe_tokens = 0
 
     print(f"run_id: {run_id}")
     print(f"queries: {len(queries)} (already done: {len(done)}) -> {output_path}")
@@ -190,16 +181,13 @@ def run_benchmark(
                     passages,
                     clients["systemone"],
                     clients["reranker"],
-                    clients["systemone_typesafe"],
                 )
                 branch_rows[branch] = _branch_row(output)
                 branch_metrics[branch] = _branch_metrics(output, gold)
-                if output.input_tokens and branch == "J":
-                    systemone_tokens += output.input_tokens
                 if output.input_tokens and branch == "T":
-                    typesafe_tokens += output.input_tokens
+                    systemone_tokens += output.input_tokens
 
-            _check_token_caps(cfg, systemone_tokens, typesafe_tokens)
+            _check_token_caps(cfg, systemone_tokens)
 
             row = {
                 "run_id": run_id,
@@ -251,7 +239,7 @@ def add_branch(
 
     Rows are checkpointed atomically every 100 completions, so an interrupted run
     resumes without losing work. Failed requests are counted and reported; rows
-    without the branch are simply retried on the next invocation.
+    without the branch are retried on the next invocation.
     """
     branch = branch.upper()
     if branch not in ALL_BRANCHES:
@@ -312,7 +300,6 @@ def add_branch(
             passages,
             clients["systemone"],
             clients["reranker"],
-            clients["systemone_typesafe"],
         )
 
     def apply(row: dict, output) -> None:
@@ -320,12 +307,9 @@ def add_branch(
         row.setdefault("metrics", {})[branch] = _branch_metrics(
             output, set(row["gold_doc_ids"])
         )
-        stats["tokens"] += output.input_tokens or 0
-        _check_token_caps(
-            cfg,
-            stats["tokens"] if branch == "J" else 0,
-            stats["tokens"] if branch == "T" else 0,
-        )
+        if branch == "T":
+            stats["tokens"] += output.input_tokens or 0
+            _check_token_caps(cfg, stats["tokens"])
 
     print(
         f"adding branch {branch} to {len(todo)} rows in {results_path} "
@@ -368,40 +352,29 @@ def add_branch(
         f"file rewritten: {results_path}"
     )
     if failures:
-        print(f"failed query ids (rerun to retry): {', '.join(failures[:10])}"
-              + (" ..." if len(failures) > 10 else ""))
+        print(
+            f"failed query ids (rerun to retry): {', '.join(failures[:10])}"
+            + (" ..." if len(failures) > 10 else "")
+        )
     return results_path
 
 
 def _check_request_caps(cfg: dict, query_count: int, branches: list[str]) -> None:
-    if "J" in branches:
-        cap = int(cfg["safety"]["max_systemone_requests"])
+    if "T" in branches:
+        cap = int(cfg["safety"].get("max_systemone_requests", 5000))
         if query_count > cap:
             raise RuntimeError(
-                f"planned OpenJev requests ({query_count}) exceed safety cap ({cap}); "
+                f"planned Jev requests ({query_count}) exceed safety cap ({cap}); "
                 "raise safety.max_systemone_requests if this is intentional"
             )
-    if "T" in branches:
-        cap = int(cfg["safety"].get("max_typesafe_requests", 5000))
-        if query_count > cap:
-            raise RuntimeError(
-                f"planned Jev 1.13 requests ({query_count}) exceed safety cap ({cap}); "
-                "raise safety.max_typesafe_requests if this is intentional"
-            )
 
 
-def _check_token_caps(cfg: dict, systemone_tokens: int, typesafe_tokens: int) -> None:
-    cap = int(cfg["safety"]["max_systemone_input_tokens"])
+def _check_token_caps(cfg: dict, systemone_tokens: int) -> None:
+    cap = int(cfg["safety"].get("max_systemone_input_tokens", 16000000))
     if systemone_tokens > cap:
         raise RuntimeError(
-            f"OpenJev input tokens exceeded safety cap ({cap}); "
+            f"Jev input tokens exceeded safety cap ({cap}); "
             "raise safety.max_systemone_input_tokens if this is intentional"
-        )
-    cap_t = int(cfg["safety"].get("max_typesafe_input_tokens", 16000000))
-    if typesafe_tokens > cap_t:
-        raise RuntimeError(
-            f"Jev 1.13 input tokens exceeded safety cap ({cap_t}); "
-            "raise safety.max_typesafe_input_tokens if this is intentional"
         )
 
 
@@ -422,8 +395,7 @@ def _build_manifest(
                 rows.append(json.loads(line))
 
     systemone_tokens = 0
-    typesafe_tokens = 0
-    typesafe_cost = 0.0
+    systemone_cost = 0.0
     rerank_tokens = 0
     resolved_models: dict[str, set[str]] = {}
     for row in rows:
@@ -433,11 +405,9 @@ def _build_manifest(
                 resolved_models.setdefault(branch, set()).add(model)
             tokens = branch_row.get("input_tokens") or 0
             cost = branch_row.get("cost_usd")
-            if branch == "J":
+            if branch == "T":
                 systemone_tokens += tokens
-            elif branch == "T":
-                typesafe_tokens += tokens
-                typesafe_cost += float(cost or 0.0)
+                systemone_cost += float(cost or 0.0)
             elif branch == "N":
                 rerank_tokens += tokens
 
@@ -461,20 +431,16 @@ def _build_manifest(
         "models": {
             "embedding": cfg["models"]["embedding"]["name"],
             "systemone_requested": cfg["models"]["systemone"]["model"],
-            "systemone_resolved": sorted(resolved_models.get("J", [])),
-            "systemone_typesafe_requested": cfg["models"]["systemone_typesafe"]["model"],
-            "systemone_typesafe_resolved": sorted(resolved_models.get("T", [])),
+            "systemone_resolved": sorted(resolved_models.get("T", [])),
             "reranker_requested": cfg["models"]["reranker_nvidia"]["name"],
             "reranker_resolved": sorted(resolved_models.get("N", [])),
             "generator": cfg["models"]["generator"]["name"],
         },
         "totals": {
             "systemone_input_tokens": systemone_tokens,
-            "systemone_typesafe_input_tokens": typesafe_tokens,
-            "systemone_typesafe_cost_usd": round(typesafe_cost, 6),
+            "systemone_cost_usd": round(systemone_cost, 6),
             "nvidia_rerank_prompt_tokens": rerank_tokens,
-            "systemone_requests": sum(1 for row in rows if "J" in row.get("branches", {})),
-            "systemone_typesafe_requests": sum(1 for row in rows if "T" in row.get("branches", {})),
+            "systemone_requests": sum(1 for row in rows if "T" in row.get("branches", {})),
         },
         "dataset_meta": dataset_meta,
         "config": cfg,

@@ -37,30 +37,17 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "requests_per_minute": 40,
         },
         "systemone": {
-            "provider": "codiv",
-            "base_url": "https://api.codiv.ai",
+            "provider": "vercel",
+            "base_url": "https://ai-gateway.vercel.sh/typesafe",
             "decisions_path": "/v1/systemone",
-            "api_key_env": "TYPESAFE_API_KEY",
-            "model": "openjev-0.1",
+            "api_key_env": "AI_GATEWAY_API_KEY",
+            "model": "typesafe-ai/jev",
             "instruction_template": (
                 "Passage [{index}] contains information that is needed to answer the question"
             ),
             "max_passage_chars": 4000,
             "max_state_chars": 200000,
-            "requests_per_minute": 600,
-        },
-        "systemone_typesafe": {
-            "provider": "openrouter",
-            "base_url": "https://openrouter.ai/api",
-            "decisions_path": "/alpha/decisions",
-            "api_key_env": "OPENROUTER_API_KEY",
-            "model": "typesafe/jev-1.13",
-            "instruction_template": (
-                "Passage [{index}] contains information that is needed to answer the question"
-            ),
-            "max_passage_chars": 4000,
-            "max_state_chars": 200000,
-            "requests_per_minute": 300,
+            "requests_per_minute": 60,
         },
         "generator": {
             "provider": "codiv",
@@ -73,11 +60,13 @@ DEFAULT_CONFIG: dict[str, Any] = {
         },
     },
     "generation": {"top_k": 5, "max_context_chars": 6000},
+    "pricing": {
+        "jev_usd_per_mtok": 0.042,
+        "other_usd_per_mtok": 0.0,
+    },
     "safety": {
-        "max_systemone_requests": 20000,
-        "max_systemone_input_tokens": 90000000,
-        "max_typesafe_requests": 5000,
-        "max_typesafe_input_tokens": 16000000,
+        "max_systemone_requests": 5000,
+        "max_systemone_input_tokens": 16000000,
     },
 }
 

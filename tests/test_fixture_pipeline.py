@@ -74,7 +74,7 @@ def _prepare_toy_dataset(tmp_path) -> dict:
 
 def test_fixture_pipeline_end_to_end(tmp_path):
     cfg = _prepare_toy_dataset(tmp_path)
-    results_path = run_benchmark(cfg, "toy", branches=["A", "J", "N"], run_kind="fixture")
+    results_path = run_benchmark(cfg, "toy", branches=["A", "N", "T"], run_kind="fixture")
 
     rows = load_rows(results_path)
     assert len(rows) == 3
@@ -82,13 +82,13 @@ def test_fixture_pipeline_end_to_end(tmp_path):
 
     for row in rows:
         assert row["run_kind"] == "fixture"
-        assert row["branches"]["J"]["probs"] is not None
-        assert len(row["branches"]["J"]["order"]) == len(row["candidates"])
-        assert set(row["metrics"]) == {"A", "J", "N"}
-        assert 0.0 <= row["metrics"]["J"]["ndcg@10"] <= 1.0
+        assert row["branches"]["T"]["probs"] is not None
+        assert len(row["branches"]["T"]["order"]) == len(row["candidates"])
+        assert set(row["metrics"]) == {"A", "N", "T"}
+        assert 0.0 <= row["metrics"]["T"]["ndcg@10"] <= 1.0
 
-    j_recall = sum(row["metrics"]["J"]["recall@5"] for row in rows) / len(rows)
-    assert j_recall >= 2 / 3
+    jev_recall = sum(row["metrics"]["T"]["recall@5"] for row in rows) / len(rows)
+    assert jev_recall >= 2 / 3
 
     manifest = json.loads(results_path.with_suffix(".manifest.json").read_text())
     assert manifest["models"]["systemone_requested"]
@@ -97,14 +97,14 @@ def test_fixture_pipeline_end_to_end(tmp_path):
 
 def test_fixture_generation_and_report(tmp_path):
     cfg = _prepare_toy_dataset(tmp_path)
-    results_path = run_benchmark(cfg, "toy", branches=["J"], run_kind="fixture")
+    results_path = run_benchmark(cfg, "toy", branches=["T"], run_kind="fixture")
 
     corpus_texts = {row["doc_id"]: corpus_text(row) for row in CORPUS}
     generation_path = tmp_path / "results" / "toy-generation.jsonl"
     stats = replay_generator(
         results_path,
         generation_path,
-        "J",
+        "T",
         FixtureGenerator(),
         corpus_texts,
         run_kind="fixture",
@@ -125,7 +125,7 @@ def test_fixture_generation_and_report(tmp_path):
     )
     report_text = report_path.read_text()
     assert "Fixture run" in report_text
-    assert "OpenJev calibration" in report_text
+    assert "Probability calibration" in report_text
     assert "Frozen-context answer generation" in report_text
     assert (tmp_path / "reports" / "toy" / "summary.json").exists()
 
@@ -140,7 +140,7 @@ def test_resume_skips_existing_rows(tmp_path):
 
 def test_add_branch_fills_missing_branch_without_rerunning_others(tmp_path):
     cfg = _prepare_toy_dataset(tmp_path)
-    results_path = run_benchmark(cfg, "toy", branches=["A", "J"], run_kind="fixture")
+    results_path = run_benchmark(cfg, "toy", branches=["A", "N"], run_kind="fixture")
 
     add_branch(cfg, results_path, "T", run_kind="fixture", concurrency=2)
 
@@ -150,4 +150,4 @@ def test_add_branch_fills_missing_branch_without_rerunning_others(tmp_path):
         assert "T" in row["branches"]
         assert row["branches"]["T"]["probs"] is not None
         assert "T" in row["metrics"]
-        assert set(row["metrics"]) == {"A", "J", "T"}
+        assert set(row["metrics"]) == {"A", "N", "T"}

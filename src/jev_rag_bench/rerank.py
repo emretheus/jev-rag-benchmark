@@ -8,14 +8,13 @@ from .retrieval import Candidate
 
 BRANCH_LABELS = {
     "A": "no reranker (hybrid order)",
-    "J": "OpenJev 0.1 batch noul (Codiv)",
-    "N": "NVIDIA reranker",
-    "T": "TypeSafe Jev 1.13 batch noul (real Jev)",
+    "T": "TypeSafe Jev 1.13 batch noul",
+    "N": "NVIDIA cross-encoder reranker",
 }
 
-DEFAULT_BRANCHES = ["A", "J", "N"]
+DEFAULT_BRANCHES = ["A", "T", "N"]
 
-ALL_BRANCHES = ["A", "J", "N", "T"]
+ALL_BRANCHES = ["A", "T", "N"]
 
 
 @dataclass
@@ -52,9 +51,8 @@ def run_branch(
     question: str,
     candidates: list[Candidate],
     passages: list[str],
-    systemone: SystemOneClient,
+    systemone: SystemOneClient | None,
     nvidia_reranker: NvidiaReranker,
-    systemone_typesafe: SystemOneClient | None = None,
 ) -> BranchOutput:
     if branch == "A":
         order = [candidate.doc_id for candidate in candidates]
@@ -63,11 +61,10 @@ def run_branch(
             order=order, scores=scores, probs=None, latency_ms=0.0, resolved_model=None
         )
 
-    if branch in ("J", "T"):
-        client = systemone if branch == "J" else systemone_typesafe
-        if client is None:
-            raise ValueError(f"branch {branch} requires its System One client")
-        return _systemone_output(client.score_relevance(question, passages), candidates)
+    if branch == "T":
+        if systemone is None:
+            raise ValueError("branch T requires its System One client")
+        return _systemone_output(systemone.score_relevance(question, passages), candidates)
 
     if branch == "N":
         result = nvidia_reranker.rerank(question, passages)

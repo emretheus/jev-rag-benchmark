@@ -1,0 +1,4 @@
+branch,method,n,ndcg@10,recall@5,recall@10,mrr@10,latency_p50_ms,latency_p95_ms,mean_input_tokens,total_input_tokens
+A,no reranker (hybrid order),1190,0.981069,0.995798,0.995798,0.975966,0.000,0.000,0.0,0
+N,NVIDIA cross-encoder reranker,1190,0.993737,0.996639,0.996639,0.992717,408.987,579.059,3909.5,4652357
+T,TypeSafe Jev 1.13 batch noul,1190,0.989260,0.996639,0.996639,0.986723,4000.343,53583.506,4544.5,5407942

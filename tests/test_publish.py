@@ -29,14 +29,23 @@ REAL_SUMMARY = {
             "latency_p50_ms": 0.0,
             "latency_p95_ms": 0.0,
         },
-        "J": {
-            "label": "OpenJev batch noul",
+        "T": {
+            "label": "TypeSafe Jev 1.13 batch noul",
             "n": 1190,
-            "ndcg@10": 0.98097,
-            "recall@5": 0.99425,
-            "mrr@10": 0.97637,
-            "latency_p50_ms": 532.0,
-            "latency_p95_ms": 910.0,
+            "ndcg@10": 0.98930,
+            "recall@5": 0.99660,
+            "mrr@10": 0.98670,
+            "latency_p50_ms": 4000.0,
+            "latency_p95_ms": 9000.0,
+        },
+        "N": {
+            "label": "NVIDIA cross-encoder reranker",
+            "n": 1190,
+            "ndcg@10": 0.99370,
+            "recall@5": 0.99660,
+            "mrr@10": 0.99270,
+            "latency_p50_ms": 409.0,
+            "latency_p95_ms": 800.0,
         },
     },
     "calibration": {
@@ -72,8 +81,8 @@ def test_validate_refuses_fixture_and_allows_preview():
 def test_render_readme_block_contains_real_numbers():
     block = render_readme_block([REAL_SUMMARY])
     assert "Reranking" in block
-    assert "98.10%" in block
-    assert "OpenJev calibration" in block
+    assert "98.93%" in block
+    assert "Probability calibration" in block
     assert "Frozen-context answer generation" in block
     assert "from real runs" in block
 
@@ -111,7 +120,8 @@ def test_dataset_card_has_metadata_and_results():
     assert card.startswith("---\n")
     assert "license: mit" in card
     assert "language:" in card
-    assert "98.10%" in card
+    assert "98.93%" in card
+    assert "Probability calibration" in card
     assert "https://github.com/x/y" in card
 
 

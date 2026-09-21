@@ -1,24 +1,21 @@
 {
-  "run_id": "scifact-a-j-n-real-20260920T123901Z",
+  "run_id": "a-n-t-20260921T203624Z",
   "run_kind": "real",
   "dataset": "scifact",
   "branches": [
     "A",
-    "J",
     "N",
     "T"
   ],
-  "results_file": "results/scifact-a-j-n-real.jsonl",
+  "results_file": "results/scifact-a-n-t-real.jsonl",
   "queries_total": 300,
   "queries_in_file": 300,
   "queries_skipped_this_run": 0,
-  "completed_at": "2026-09-20T16:57:20.070990+00:00",
+  "completed_at": "2026-09-21T20:36:24.476983+00:00",
   "models": {
     "embedding": "nvidia/nemotron-3-embed-1b",
     "systemone_requested": "openjev-0.1",
-    "systemone_resolved": [
-      "openjev-0.1"
-    ],
+    "systemone_resolved": [],
     "systemone_typesafe_requested": "typesafe/jev-1.13",
     "systemone_typesafe_resolved": [
       "typesafe-ai/jev"
@@ -30,11 +27,11 @@
     "generator": "diffusiongemma-26b"
   },
   "totals": {
-    "systemone_input_tokens": 4165608,
+    "systemone_input_tokens": 0,
     "systemone_typesafe_input_tokens": 2411716,
     "systemone_typesafe_cost_usd": 0.0,
     "nvidia_rerank_prompt_tokens": 2179282,
-    "systemone_requests": 300,
+    "systemone_requests": 0,
     "systemone_typesafe_requests": 300
   },
   "dataset_meta": {
@@ -119,6 +116,11 @@
     "generation": {
       "top_k": 5,
       "max_context_chars": 6000
+    },
+    "pricing": {
+      "openjev_usd_per_mtok": 0.0,
+      "jev_usd_per_mtok": 0.042,
+      "other_usd_per_mtok": 0.0
     },
     "safety": {
       "max_systemone_requests": 20000,

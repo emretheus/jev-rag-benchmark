@@ -1,13 +1,13 @@
-"""Confidence-gated use of OpenJev as a RAG decision layer.
+"""Confidence-gated use of Jev as a RAG decision layer.
 
-The raw always-on reranking result (see reports) shows OpenJev is not a reliable
-list ranker. This module measures the decision-layer mode instead: use OpenJev
-probabilities to decide *where* to act, falling back to the hybrid order
+The raw always-on reranking result (see reports) shows that ranking every
+candidate is noisy. This module measures the decision-layer mode instead: use
+Jev probabilities to decide *where* to act, falling back to the hybrid order
 elsewhere. Two modes:
 
 - partition: candidates with p >= threshold are reranked first, remaining
   candidates keep their hybrid order (never drops a candidate).
-- gate: replace the whole order with OpenJev only when top-1 p >= threshold.
+- gate: replace the whole order with Jev only when top-1 p >= threshold.
 
 Also measures answerability gating: skip generation when top-1 p is low.
 """
@@ -22,19 +22,23 @@ DEFAULT_THRESHOLD = 0.5
 ANSWERABILITY_THRESHOLDS = [0.5, 0.7, 0.8, 0.9]
 
 
-def partition_order(row: dict, threshold: float = DEFAULT_THRESHOLD) -> list[str]:
-    probs = row["branches"]["J"]["probs"]
-    j_order = row["branches"]["J"]["order"]
+def partition_order(
+    row: dict, threshold: float = DEFAULT_THRESHOLD, branch: str = "T"
+) -> list[str]:
+    probs = row["branches"][branch]["probs"]
+    j_order = row["branches"][branch]["order"]
     confident = [doc_id for doc_id, p in zip(j_order, probs, strict=False) if p >= threshold]
     confident_set = set(confident)
     rest = [doc_id for doc_id in row["branches"]["A"]["order"] if doc_id not in confident_set]
     return confident + rest
 
 
-def gate_order(row: dict, threshold: float = DEFAULT_THRESHOLD) -> list[str]:
-    probs = row["branches"]["J"]["probs"]
+def gate_order(
+    row: dict, threshold: float = DEFAULT_THRESHOLD, branch: str = "T"
+) -> list[str]:
+    probs = row["branches"][branch]["probs"]
     if probs and probs[0] >= threshold:
-        return list(row["branches"]["J"]["order"])
+        return list(row["branches"][branch]["order"])
     return list(row["branches"]["A"]["order"])
 
 
@@ -56,26 +60,34 @@ def evaluate_order_fn(rows: list[dict], order_fn) -> dict:
     }
 
 
-def gating_summary(rows: list[dict], threshold: float = DEFAULT_THRESHOLD, seed: int = 13) -> dict:
+def gating_summary(
+    rows: list[dict],
+    threshold: float = DEFAULT_THRESHOLD,
+    seed: int = 13,
+    branch: str = "T",
+) -> dict:
     usable = [
         row
         for row in rows
-        if row.get("branches", {}).get("J", {}).get("probs")
+        if row.get("branches", {}).get(branch, {}).get("probs")
         and row.get("branches", {}).get("A", {}).get("order")
     ]
     if not usable:
         return {}
 
     baseline = evaluate_order_fn(usable, lambda row: row["branches"]["A"]["order"])
-    always = evaluate_order_fn(usable, lambda row: row["branches"]["J"]["order"])
-    partition = evaluate_order_fn(usable, lambda row: partition_order(row, threshold))
-    gate = evaluate_order_fn(usable, lambda row: gate_order(row, threshold))
+    always = evaluate_order_fn(usable, lambda row: row["branches"][branch]["order"])
+    partition = evaluate_order_fn(
+        usable, lambda row: partition_order(row, threshold, branch)
+    )
+    gate = evaluate_order_fn(usable, lambda row: gate_order(row, threshold, branch))
 
     baseline_ndcg = [
         ndcg_at_k(row["branches"]["A"]["order"], set(row["gold_doc_ids"]), 10) for row in usable
     ]
     partition_ndcg = [
-        ndcg_at_k(partition_order(row, threshold), set(row["gold_doc_ids"]), 10) for row in usable
+        ndcg_at_k(partition_order(row, threshold, branch), set(row["gold_doc_ids"]), 10)
+        for row in usable
     ]
     diff, low, high = paired_bootstrap_ci(partition_ndcg, baseline_ndcg, seed=seed)
 
@@ -94,13 +106,14 @@ def answerability_summary(
     rows: list[dict],
     generation_rows: list[dict],
     thresholds: list[float] | None = None,
+    branch: str = "T",
 ) -> list[dict]:
     thresholds = thresholds or ANSWERABILITY_THRESHOLDS
     generation_by_id = {str(row.get("query_id")): row for row in generation_rows}
     usable = [
         row
         for row in rows
-        if row.get("branches", {}).get("J", {}).get("probs")
+        if row.get("branches", {}).get(branch, {}).get("probs")
         and str(row.get("query_id")) in generation_by_id
     ]
     if not usable:
@@ -108,7 +121,9 @@ def answerability_summary(
     results = []
     total = len(usable)
     for threshold in thresholds:
-        kept = [row for row in usable if row["branches"]["J"]["probs"][0] >= threshold]
+        kept = [
+            row for row in usable if row["branches"][branch]["probs"][0] >= threshold
+        ]
         if not kept:
             continue
         generation_kept = [generation_by_id[str(row["query_id"])] for row in kept]

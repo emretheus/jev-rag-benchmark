@@ -33,8 +33,12 @@ def _metric_values(rows: list[dict], branch: str, metric: str) -> list[float]:
     return values
 
 
-def _fmt_pct(value: float) -> str:
-    return f"{value * 100:.3f}%"
+def _fmt_pct(value: float | None) -> str:
+    return f"{value * 100:.3f}%" if value is not None else "n/a"
+
+
+def _fmt_optional(value: float | None) -> str:
+    return f"{value:.3f}" if value is not None else "n/a"
 
 
 def _fmt_ci(values: list[float], seed: int) -> str:
@@ -45,7 +49,8 @@ def _fmt_ci(values: list[float], seed: int) -> str:
 def generate_report(
     results_path: str | Path,
     output_dir: str | Path,
-    generation_path: str | Path | None = None,
+    generation_path: str | Path | list[str | Path] | None = None,
+    pricing: dict | None = None,
     seed: int = 13,
 ) -> Path:
     rows = load_rows(results_path)
@@ -152,44 +157,48 @@ def generate_report(
                 "n_pairs": len(t_ndcg),
             }
 
-    if "J" in branches:
-        probs: list[float] = []
-        labels: list[int] = []
-        top1: list[tuple[float, int]] = []
-        for row in rows:
-            branch_row = row.get("branches", {}).get("J")
-            if not branch_row or not branch_row.get("probs"):
-                continue
-            gold = set(row.get("gold_doc_ids") or [])
-            order = branch_row["order"]
-            for doc_id, probability in zip(order, branch_row["probs"], strict=False):
-                probs.append(float(probability))
-                labels.append(1 if doc_id in gold else 0)
-            top1.append((float(branch_row["probs"][0]), 1 if order[0] in gold else 0))
-        if probs:
-            correct_top1 = [p for p, y in top1 if y == 1]
-            wrong_top1 = [p for p, y in top1 if y == 0]
-            summary["calibration"] = {
-                "n_predictions": len(probs),
-                "positive_rate": mean(labels),
-                "brier": brier_score(probs, labels),
-                "ece_10bin": expected_calibration_error(probs, labels, bins=10),
-                "reliability": reliability_table(probs, labels, bins=10),
-                "risk_coverage": risk_coverage(probs, labels),
-                "top1_mean_confidence_when_correct": mean(correct_top1) if correct_top1 else None,
-                "top1_mean_confidence_when_wrong": mean(wrong_top1) if wrong_top1 else None,
-                "top1_accuracy": mean([y for _, y in top1]) if top1 else None,
-            }
+    calibration_by_branch: dict[str, dict] = {}
+    for branch in branches:
+        if any(row.get("branches", {}).get(branch, {}).get("probs") for row in rows):
+            stats = _calibration_stats(rows, branch)
+            if stats:
+                calibration_by_branch[branch] = stats
+    if calibration_by_branch:
+        summary["calibration_by_branch"] = calibration_by_branch
+        summary["calibration"] = calibration_by_branch.get("J") or next(
+            iter(calibration_by_branch.values())
+        )
 
-    if generation_path and Path(generation_path).exists():
-        generation_rows = load_rows(generation_path)
-        summary["generation"] = _generation_summary(Path(generation_path))
-        summary["generation"]["file"] = str(generation_path)
-        summary["generation_gating"] = answerability_summary(rows, generation_rows)
+    generations: list[dict] = []
+    for path in _generation_paths(generation_path):
+        if not Path(path).exists():
+            continue
+        generation_rows = load_rows(path)
+        if not generation_rows:
+            continue
+        branch = str(generation_rows[0].get("branch") or "J")
+        entry = _generation_summary(Path(path))
+        entry["file"] = str(path)
+        entry["branch"] = branch
+        entry["answerability_gating"] = answerability_summary(
+            rows, generation_rows, branch=branch
+        )
+        generations.append(entry)
+    if generations:
+        summary["generations"] = generations
+        summary["generation"] = generations[0]
 
-    gated = gating_summary(rows)
-    if gated:
-        summary["gated"] = gated
+    gated_by_branch: dict[str, dict] = {}
+    for branch in branches:
+        gated_result = gating_summary(rows, branch=branch)
+        if gated_result:
+            gated_by_branch[branch] = gated_result
+    if gated_by_branch:
+        summary["gated_by_branch"] = gated_by_branch
+        summary["gated"] = gated_by_branch.get("J") or next(iter(gated_by_branch.values()))
+
+    if pricing:
+        summary["cost"] = _cost_summary(summary, pricing)
 
     report_path = output_dir / "report.md"
     report_path.write_text(_render_markdown(summary), encoding="utf-8")
@@ -198,6 +207,63 @@ def generate_report(
     )
     _write_csv(output_dir, summary)
     return report_path
+
+
+def _calibration_stats(rows: list[dict], branch: str) -> dict:
+    probabilities: list[float] = []
+    labels: list[int] = []
+    top1: list[tuple[float, int]] = []
+    for row in rows:
+        branch_row = row.get("branches", {}).get(branch)
+        if not branch_row or not branch_row.get("probs"):
+            continue
+        gold = set(row.get("gold_doc_ids") or [])
+        order = branch_row["order"]
+        for doc_id, probability in zip(order, branch_row["probs"], strict=False):
+            probabilities.append(float(probability))
+            labels.append(1 if doc_id in gold else 0)
+        top1.append((float(branch_row["probs"][0]), 1 if order[0] in gold else 0))
+    if not probabilities:
+        return {}
+    correct = [p for p, y in top1 if y == 1]
+    wrong = [p for p, y in top1 if y == 0]
+    return {
+        "n_predictions": len(probabilities),
+        "positive_rate": mean(labels),
+        "brier": brier_score(probabilities, labels),
+        "ece_10bin": expected_calibration_error(probabilities, labels, bins=10),
+        "reliability": reliability_table(probabilities, labels, bins=10),
+        "risk_coverage": risk_coverage(probabilities, labels),
+        "top1_mean_confidence_when_correct": mean(correct) if correct else None,
+        "top1_mean_confidence_when_wrong": mean(wrong) if wrong else None,
+        "top1_accuracy": mean([y for _, y in top1]) if top1 else None,
+    }
+
+
+def _generation_paths(value: str | Path | list[str | Path] | None) -> list[Path]:
+    if value is None:
+        return []
+    if isinstance(value, (str, Path)):
+        return [Path(value)]
+    return [Path(path) for path in value]
+
+
+def _cost_summary(summary: dict, pricing: dict) -> dict:
+    cost: dict = {}
+    for branch, stats in summary["branches"].items():
+        tokens = int(stats.get("total_input_tokens") or 0)
+        if branch == "T":
+            per_mtok = float(pricing.get("jev_usd_per_mtok", 0.042))
+        elif branch == "J":
+            per_mtok = float(pricing.get("openjev_usd_per_mtok", 0.0))
+        else:
+            per_mtok = float(pricing.get("other_usd_per_mtok", 0.0))
+        cost[branch] = {
+            "tokens": tokens,
+            "usd_per_mtok": per_mtok,
+            "usd_at_list": round(tokens / 1_000_000 * per_mtok, 6),
+        }
+    return cost
 
 
 def _write_csv(output_dir: Path, summary: dict) -> None:
@@ -332,129 +398,144 @@ def _render_markdown(summary: dict) -> str:
             )
         lines.append("")
 
-    calibration = summary.get("calibration") or {}
-    if calibration:
-        lines.append("## 3. OpenJev calibration (candidate-level relevance)")
+    calibration_by_branch = summary.get("calibration_by_branch") or {}
+    if not calibration_by_branch and summary.get("calibration"):
+        calibration_by_branch = {"J": summary["calibration"]}
+    if calibration_by_branch:
+        lines.append("## 3. Probability calibration (candidate-level relevance)")
         lines.append("")
         lines.append(
-            f"Each candidate passage receives a probability of relevance. "
-            f"Predictions: {calibration['n_predictions']}, positive rate: "
-            f"{_fmt_pct(calibration['positive_rate'])}."
+            "Every candidate passage receives a probability of relevance. Lower Brier and ECE "
+            "are better; positive rate and prediction counts are shown so ECE is interpretable."
         )
         lines.append("")
-        lines.append(f"- Brier score: **{calibration['brier']:.4f}** (lower is better)")
-        lines.append(f"- Expected calibration error (10 bins): **{calibration['ece_10bin']:.4f}**")
-        if calibration.get("top1_accuracy") is not None:
-            lines.append(f"- Top-1 accuracy: {_fmt_pct(calibration['top1_accuracy'])}")
-        if calibration.get("top1_mean_confidence_when_correct") is not None:
-            correct_confidence = calibration["top1_mean_confidence_when_correct"]
-            wrong_confidence = calibration.get("top1_mean_confidence_when_wrong")
-            wrong_display = f"{wrong_confidence:.3f}" if wrong_confidence is not None else "n/a"
+        lines.append(
+            "| Model | Branch | Predictions | Positive rate | Brier | ECE (10 bin) | "
+            "Top-1 accuracy | Confidence (correct) | Confidence (wrong) |"
+        )
+        lines.append("|---|---|---|---|---|---|---|---|---|")
+        for branch, calibration in calibration_by_branch.items():
             lines.append(
-                "- Mean top-1 confidence when correct / wrong: "
-                f"{correct_confidence:.3f} / {wrong_display}"
+                f"| {BRANCH_LABELS.get(branch, branch)} | {branch} | "
+                f"{calibration['n_predictions']} | {_fmt_pct(calibration['positive_rate'])} | "
+                f"{calibration['brier']:.4f} | {calibration['ece_10bin']:.4f} | "
+                f"{_fmt_pct(calibration.get('top1_accuracy'))} | "
+                f"{_fmt_optional(calibration.get('top1_mean_confidence_when_correct'))} | "
+                f"{_fmt_optional(calibration.get('top1_mean_confidence_when_wrong'))} |"
             )
         lines.append("")
-        lines.append("Reliability:")
+        primary = "T" if "T" in calibration_by_branch else next(iter(calibration_by_branch))
+        primary_stats = calibration_by_branch[primary]
+        lines.append(
+            f"Reliability and risk-coverage for **{BRANCH_LABELS.get(primary, primary)}** "
+            f"(branch {primary}):"
+        )
         lines.append("")
         lines.append("| Probability bin | Count | Mean confidence | Accuracy |")
         lines.append("|---|---|---|---|")
-        for bin_row in calibration["reliability"]:
+        for bin_row in primary_stats["reliability"]:
             lines.append(
                 f"| {bin_row['bin']} | {bin_row['count']} | {bin_row['mean_confidence']:.3f} | "
                 f"{bin_row['accuracy']:.3f} |"
             )
         lines.append("")
-        lines.append("Risk-coverage (threshold on relevance probability):")
-        lines.append("")
         lines.append("| Threshold | Covered | Coverage | Precision | Recall |")
         lines.append("|---|---|---|---|---|")
-        for row in calibration["risk_coverage"]:
+        for row in primary_stats["risk_coverage"]:
             lines.append(
                 f"| {row['threshold']:.2f} | {row['count']} | {_fmt_pct(row['coverage'])} | "
                 f"{_fmt_pct(row['precision'])} | {_fmt_pct(row['recall'])} |"
             )
         lines.append("")
 
-    gated = summary.get("gated") or {}
-    if gated:
-        threshold = gated.get("threshold", 0.5)
-        lines.append(
-            f"## 3b. RAG optimization mode: confidence-partitioned OpenJev "
-            f"(t = {threshold:.2f})"
-        )
+    gated_by_branch = summary.get("gated_by_branch") or {}
+    if not gated_by_branch and summary.get("gated"):
+        gated_by_branch = {"J": summary["gated"]}
+    if gated_by_branch:
+        threshold = next(iter(gated_by_branch.values())).get("threshold", 0.5)
+        lines.append("## 3b. RAG optimization mode: confidence-partitioned reranking")
         lines.append("")
         lines.append(
-            "Always-on reranking applies OpenJev to every candidate; the decision-layer mode "
-            "reranks only candidates whose probability clears the threshold and keeps the hybrid "
-            "order for the rest. Candidate coverage never drops below the baseline order."
+            f"Threshold t = {threshold:.2f}: candidates whose probability clears the threshold "
+            "are reranked by the model, the rest keep the hybrid order, so candidate coverage "
+            "never drops below the baseline."
         )
         lines.append("")
-        lines.append("| Mode | nDCG@10 | Recall@5 | Recall@10 | MRR@10 |")
-        lines.append("|---|---|---|---|---|")
-        for key, label in (
-            ("baseline", "A — hybrid order (baseline)"),
-            ("always_on", "J — OpenJev always-on"),
-            ("partition", "G — confidence-partitioned"),
-            ("gate", "Gate — all-or-nothing switch"),
-        ):
-            stats = gated.get(key)
-            if not stats:
-                continue
+        lines.append("| Model | Mode | nDCG@10 | Recall@5 | Recall@10 | MRR@10 |")
+        lines.append("|---|---|---|---|---|---|")
+        baseline = next(iter(gated_by_branch.values())).get("baseline")
+        if baseline:
             lines.append(
-                f"| {label} | {_fmt_pct(stats['ndcg@10'])} | {_fmt_pct(stats['recall@5'])} | "
-                f"{_fmt_pct(stats['recall@10'])} | {_fmt_pct(stats['mrr@10'])} |"
+                f"| — | A baseline (hybrid order) | {_fmt_pct(baseline['ndcg@10'])} | "
+                f"{_fmt_pct(baseline['recall@5'])} | {_fmt_pct(baseline['recall@10'])} | "
+                f"{_fmt_pct(baseline['mrr@10'])} |"
             )
+        for branch, gated in gated_by_branch.items():
+            label = BRANCH_LABELS.get(branch, branch)
+            for key, mode in (("always_on", "always-on"), ("partition", "partitioned")):
+                stats = gated.get(key)
+                if not stats:
+                    continue
+                lines.append(
+                    f"| {label} | {mode} | {_fmt_pct(stats['ndcg@10'])} | "
+                    f"{_fmt_pct(stats['recall@5'])} | {_fmt_pct(stats['recall@10'])} | "
+                    f"{_fmt_pct(stats['mrr@10'])} |"
+                )
         lines.append("")
-        comparison = gated.get("partition_vs_baseline_ndcg@10")
-        if comparison:
+        lines.append("| Model | Partitioned vs baseline nDCG@10 | 95% CI | n |")
+        lines.append("|---|---|---|---|")
+        for branch, gated in gated_by_branch.items():
+            comparison = gated.get("partition_vs_baseline_ndcg@10")
+            if not comparison:
+                continue
             low, high = comparison["ci"]
             lines.append(
-                f"- Partitioned vs baseline nDCG@10: **{comparison['mean_diff'] * 100:+.3f} pts** "
-                f"(95% CI {low * 100:+.3f} to {high * 100:+.3f}), n={gated.get('n', 0)}"
+                f"| {BRANCH_LABELS.get(branch, branch)} | "
+                f"{comparison['mean_diff'] * 100:+.3f} pts | "
+                f"{low * 100:+.3f} to {high * 100:+.3f} | {gated.get('n', 0)} |"
             )
-            lines.append(
-                "- This is a post-hoc (exploratory) analysis on already-collected data; the "
-                "threshold is fixed at 0.5 a priori of this analysis but was not preregistered."
-            )
-            lines.append("")
+        lines.append("")
+        lines.append(
+            "- Post-hoc (exploratory) analysis on already-collected data; the threshold is fixed "
+            "at 0.5 a priori of this analysis but was not preregistered."
+        )
+        lines.append("")
 
-    generation = summary.get("generation") or {}
-    if generation:
+    generations = summary.get("generations") or []
+    if not generations and summary.get("generation"):
+        generations = [summary["generation"]]
+    if generations:
         lines.append("## 4. Frozen-context answer generation")
         lines.append("")
         lines.append(
-            f"Generator: `{', '.join(generation['models'])}`, branch "
-            f"`{generation['branch']}`, n={generation['n']}."
+            "The generator answers only from the frozen top-5 of one branch; retrieval and "
+            "reranking cannot influence this comparison."
         )
         lines.append("")
-        if generation.get("mean_f1") is not None:
-            lines.append(f"- Mean token F1: **{_fmt_pct(generation['mean_f1'])}**")
-            lines.append(f"- Exact match: {_fmt_pct(generation['exact_match'])}")
+        lines.append(
+            "| Branch (contexts) | Generator | n | Token F1 | Exact match | F1 >= 0.5 | "
+            "Abstention | Valid citations | p50 |"
+        )
+        lines.append("|---|---|---|---|---|---|---|---|---|")
+        for generation in generations:
+            models = ", ".join(generation.get("models") or []) or "n/a"
             lines.append(
-                "- Successful answers (F1 >= 0.5): "
-                f"{_fmt_pct(generation['success_rate_f1_ge_0.5'])}"
+                f"| {generation.get('branch', '?')} | {models} | {generation.get('n', 0)} | "
+                f"{_fmt_pct(generation.get('mean_f1'))} | "
+                f"{_fmt_pct(generation.get('exact_match'))} | "
+                f"{_fmt_pct(generation.get('success_rate_f1_ge_0.5'))} | "
+                f"{_fmt_pct(generation.get('abstention_rate'))} | "
+                f"{_fmt_pct(generation.get('citation_valid_rate'))} | "
+                f"{generation.get('latency_p50_ms', 0.0):.0f} ms |"
             )
-        lines.append(f"- Abstention rate: {_fmt_pct(generation['abstention_rate'])}")
-        if generation.get("citation_valid_rate") is not None:
-            lines.append(f"- Valid citation rate: {_fmt_pct(generation['citation_valid_rate'])}")
-        lines.append(
-            f"- Generation latency p50 / p95: {generation['latency_p50_ms']:.1f} ms / "
-            f"{generation['latency_p95_ms']:.1f} ms"
-        )
-        lines.append(
-            f"- Tokens: {generation['prompt_tokens']} prompt, "
-            f"{generation['completion_tokens']} completion"
-        )
         lines.append("")
-
-        gating_rows = summary.get("generation_gating") or []
-        if gating_rows:
-            lines.append("### Answerability gating: generate only when top-1 probability >= t")
-            lines.append("")
+        for generation in generations:
+            gating_rows = generation.get("answerability_gating") or []
+            if not gating_rows:
+                continue
             lines.append(
-                "Rows below the threshold would not call the generator at all; the remaining "
-                "rows are the same frozen-context calls."
+                f"Answerability gating (branch {generation.get('branch', '?')}): skip generation "
+                "when the top-1 probability is below the threshold"
             )
             lines.append("")
             lines.append(
@@ -469,7 +550,25 @@ def _render_markdown(summary: dict) -> str:
                 )
             lines.append("")
 
-    lines.append("## 5. Interpretation limits")
+    cost = summary.get("cost") or {}
+    if cost:
+        lines.append("## 5. Cost at list price")
+        lines.append("")
+        lines.append("| Branch | Input tokens | List price / 1M | Cost at list price |")
+        lines.append("|---|---|---|---|")
+        for branch, entry in cost.items():
+            lines.append(
+                f"| {BRANCH_LABELS.get(branch, branch)} | {entry['tokens']:,} | "
+                f"${entry['usd_per_mtok']:.3f} | ${entry['usd_at_list']:.4f} |"
+            )
+        lines.append("")
+        lines.append(
+            "- Every published run executed on free tiers; the actual spend was **$0**. "
+            "List prices are shown so the benchmark can be budgeted anywhere."
+        )
+        lines.append("")
+
+    lines.append("## 6. Interpretation limits")
     lines.append("")
     lines.append(
         "- Retrieval metrics (nDCG, Recall@k, MRR) and answer F1 measure different stages; "
@@ -488,9 +587,8 @@ def _render_markdown(summary: dict) -> str:
         "guarantee."
     )
     lines.append(
-        "- The free-tier generator is DiffusionGemma 26B, the base model of OpenJev. Generation "
-        "consumes frozen contexts, so retrieval and reranking metrics are unaffected, but "
-        "end-to-end answer quality is not independent of the reranker's base model."
+        "- The generator is a free-tier model (DiffusionGemma 26B via Codiv). Generation consumes "
+        "frozen contexts, so retrieval and reranking metrics are unaffected by it."
     )
     lines.append(
         "- Baseline model availability changes over time (several NVIDIA models were retired "

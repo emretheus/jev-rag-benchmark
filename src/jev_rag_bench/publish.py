@@ -6,6 +6,8 @@ import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 
+from .rerank import BRANCH_LABELS
+
 RESULTS_START = "<!-- RESULTS:START -->"
 RESULTS_END = "<!-- RESULTS:END -->"
 
@@ -62,7 +64,7 @@ def _method_label(branch: str, stats: dict) -> str:
 
 def rerank_rows(summary: dict) -> list[list[str]]:
     rows = []
-    for branch in ("A", "J", "N", "T"):
+    for branch in ("A", "T", "N"):
         stats = summary.get("branches", {}).get(branch)
         if not stats:
             continue
@@ -81,59 +83,87 @@ def rerank_rows(summary: dict) -> list[list[str]]:
 
 
 def calibration_rows(summary: dict) -> list[list[str]]:
-    calibration = summary.get("calibration") or {}
-    if not calibration:
-        return []
-    correct = calibration.get("top1_mean_confidence_when_correct")
-    wrong = calibration.get("top1_mean_confidence_when_wrong")
-    return [
-        [
-            summary.get("dataset", "unknown"),
-            f"{calibration.get('ece_10bin', 0.0):.4f}",
-            f"{calibration.get('brier', 0.0):.4f}",
-            _fmt_pct(calibration.get("top1_accuracy")),
-            f"{correct:.3f}" if correct is not None else "n/a",
-            f"{wrong:.3f}" if wrong is not None else "n/a",
-        ]
-    ]
+    by_branch = summary.get("calibration_by_branch") or {}
+    if not by_branch and summary.get("calibration"):
+        by_branch = {"T": summary["calibration"]}
+    rows = []
+    for branch, calibration in by_branch.items():
+        correct = calibration.get("top1_mean_confidence_when_correct")
+        wrong = calibration.get("top1_mean_confidence_when_wrong")
+        rows.append(
+            [
+                summary.get("dataset", "unknown"),
+                BRANCH_LABELS.get(branch, branch),
+                f"{calibration.get('ece_10bin', 0.0):.4f}",
+                f"{calibration.get('brier', 0.0):.4f}",
+                _fmt_pct(calibration.get("top1_accuracy")),
+                f"{correct:.3f}" if correct is not None else "n/a",
+                f"{wrong:.3f}" if wrong is not None else "n/a",
+            ]
+        )
+    return rows
 
 
 def generation_rows(summary: dict) -> list[list[str]]:
-    generation = summary.get("generation") or {}
-    if not generation:
-        return []
-    models = ", ".join(generation.get("models") or []) or "n/a"
-    return [
-        [
-            summary.get("dataset", "unknown"),
-            models,
-            _fmt_pct(generation.get("mean_f1")),
-            _fmt_pct(generation.get("exact_match")),
-            _fmt_pct(generation.get("success_rate_f1_ge_0.5")),
-            _fmt_pct(generation.get("abstention_rate")),
-            _fmt_pct(generation.get("citation_valid_rate")),
-        ]
-    ]
+    generations = summary.get("generations") or []
+    if not generations and summary.get("generation"):
+        generations = [summary["generation"]]
+    rows = []
+    for generation in generations:
+        models = ", ".join(generation.get("models") or []) or "n/a"
+        rows.append(
+            [
+                summary.get("dataset", "unknown"),
+                str(generation.get("branch", "?")),
+                models,
+                _fmt_pct(generation.get("mean_f1")),
+                _fmt_pct(generation.get("exact_match")),
+                _fmt_pct(generation.get("success_rate_f1_ge_0.5")),
+                _fmt_pct(generation.get("abstention_rate")),
+                _fmt_pct(generation.get("citation_valid_rate")),
+            ]
+        )
+    return rows
 
 
 def gated_rows(summary: dict) -> list[list[str]]:
-    gated = summary.get("gated") or {}
-    if not gated:
-        return []
-    comparison = gated.get("partition_vs_baseline_ndcg@10") or {}
-    diff = comparison.get("mean_diff")
-    ci = comparison.get("ci") or [None, None]
-    return [
-        [
-            summary.get("dataset", "unknown"),
-            f"{gated.get('threshold', 0.5):.2f}",
-            _fmt_pct(gated["baseline"]["ndcg@10"]),
-            _fmt_pct(gated["always_on"]["ndcg@10"]),
-            _fmt_pct(gated["partition"]["ndcg@10"]),
-            f"{diff * 100:+.2f} pts" if diff is not None else "n/a",
-            f"{ci[0] * 100:+.2f} to {ci[1] * 100:+.2f}" if ci[0] is not None else "n/a",
-        ]
-    ]
+    by_branch = summary.get("gated_by_branch") or {}
+    if not by_branch and summary.get("gated"):
+        by_branch = {"T": summary["gated"]}
+    rows = []
+    for branch, gated in by_branch.items():
+        comparison = gated.get("partition_vs_baseline_ndcg@10") or {}
+        diff = comparison.get("mean_diff")
+        ci = comparison.get("ci") or [None, None]
+        rows.append(
+            [
+                summary.get("dataset", "unknown"),
+                BRANCH_LABELS.get(branch, branch),
+                f"{gated.get('threshold', 0.5):.2f}",
+                _fmt_pct(gated["baseline"]["ndcg@10"]),
+                _fmt_pct(gated["always_on"]["ndcg@10"]),
+                _fmt_pct(gated["partition"]["ndcg@10"]),
+                f"{diff * 100:+.2f} pts" if diff is not None else "n/a",
+                f"{ci[0] * 100:+.2f} to {ci[1] * 100:+.2f}" if ci[0] is not None else "n/a",
+            ]
+        )
+    return rows
+
+
+def cost_rows(summary: dict) -> list[list[str]]:
+    cost = summary.get("cost") or {}
+    rows = []
+    for branch, entry in cost.items():
+        rows.append(
+            [
+                summary.get("dataset", "unknown"),
+                BRANCH_LABELS.get(branch, branch),
+                f"{entry.get('tokens', 0):,}",
+                f"${entry.get('usd_per_mtok', 0.0):.3f}",
+                f"${entry.get('usd_at_list', 0.0):.4f}",
+            ]
+        )
+    return rows
 
 
 def _markdown_table(headers: list[str], rows: list[list[str]]) -> str:
@@ -173,12 +203,13 @@ def render_readme_block(summaries: list[dict]) -> str:
 
     rows = [row for summary in summaries for row in calibration_rows(summary)]
     if rows:
-        lines.append("### OpenJev calibration (candidate-level relevance probabilities)")
+        lines.append("### Probability calibration (candidate-level relevance)")
         lines.append("")
         lines.append(
             _markdown_table(
                 [
                     "Dataset",
+                    "Model",
                     "ECE (10 bin)",
                     "Brier",
                     "Top-1 accuracy",
@@ -192,16 +223,17 @@ def render_readme_block(summaries: list[dict]) -> str:
 
     rows = [row for summary in summaries for row in gated_rows(summary)]
     if rows:
-        lines.append("### RAG optimization mode (confidence-partitioned OpenJev, fixed t = 0.50)")
+        lines.append("### RAG optimization mode (confidence-partitioned Jev, fixed t = 0.50)")
         lines.append("")
         lines.append(
             _markdown_table(
                 [
                     "Dataset",
+                    "Model",
                     "Threshold",
                     "A baseline nDCG@10",
-                    "J always-on nDCG@10",
-                    "G partitioned nDCG@10",
+                    "Always-on nDCG@10",
+                    "Partitioned nDCG@10",
                     "Delta vs baseline",
                     "95% CI",
                 ],
@@ -212,9 +244,21 @@ def render_readme_block(summaries: list[dict]) -> str:
 
     rows = [row for summary in summaries for row in generation_rows(summary)]
     if rows:
-        lines.append("### Frozen-context answer generation (OpenJev top-5)")
+        lines.append("### Frozen-context answer generation")
         lines.append("")
         lines.append(_markdown_table(GENERATION_HEADERS, rows))
+        lines.append("")
+
+    rows = [row for summary in summaries for row in cost_rows(summary)]
+    if rows:
+        lines.append("### Cost at list price (actual published spend: $0, free tiers)")
+        lines.append("")
+        lines.append(
+            _markdown_table(
+                ["Dataset", "Branch", "Input tokens", "List price / 1M", "Cost at list price"],
+                rows,
+            )
+        )
         lines.append("")
 
     lines.append(
@@ -265,14 +309,17 @@ def render_text_tables(summaries: list[dict]) -> str:
 
     rows = [row for summary in summaries for row in calibration_rows(summary)]
     if rows:
-        lines.append("OpenJev calibration (candidate-level)")
-        ascii_table(["Dataset", "ECE", "Brier", "Top-1 acc", "Conf correct", "Conf wrong"], rows)
+        lines.append("Probability calibration (candidate-level)")
+        ascii_table(
+            ["Dataset", "Model", "ECE", "Brier", "Top-1 acc", "Conf correct", "Conf wrong"], rows
+        )
 
     rows = [row for summary in summaries for row in generation_rows(summary)]
     if rows:
         lines.append("Frozen-context answer generation")
         ascii_table(
-            ["Dataset", "Generator", "F1", "EM", "F1>=0.5", "Abstain", "Citations"], rows
+            ["Dataset", "Contexts", "Generator", "F1", "EM", "F1>=0.5", "Abstain", "Citations"],
+            rows,
         )
     return "\n".join(lines)
 
@@ -339,11 +386,12 @@ def write_space(
 
     rows = [row for summary in summaries for row in calibration_rows(summary)]
     if rows:
-        sections.append("<h2>OpenJev calibration (candidate-level relevance probabilities)</h2>")
+        sections.append("<h2>Probability calibration (candidate-level relevance)</h2>")
         sections.append(
             _html_table(
                 [
                     "Dataset",
+                    "Model",
                     "ECE (10 bin)",
                     "Brier",
                     "Top-1 accuracy",
@@ -356,22 +404,23 @@ def write_space(
 
     rows = [row for summary in summaries for row in generation_rows(summary)]
     if rows:
-        sections.append("<h2>Frozen-context answer generation (OpenJev top-5)</h2>")
+        sections.append("<h2>Frozen-context answer generation</h2>")
         sections.append(_html_table(GENERATION_HEADERS, rows))
 
     rows = [row for summary in summaries for row in gated_rows(summary)]
     if rows:
         sections.append(
-            "<h2>RAG optimization mode (confidence-partitioned OpenJev, fixed t = 0.50)</h2>"
+            "<h2>RAG optimization mode (confidence-partitioned Jev, fixed t = 0.50)</h2>"
         )
         sections.append(
             _html_table(
                 [
                     "Dataset",
+                    "Model",
                     "Threshold",
                     "A baseline nDCG@10",
-                    "J always-on nDCG@10",
-                    "G partitioned nDCG@10",
+                    "Always-on nDCG@10",
+                    "Partitioned nDCG@10",
                     "Delta vs baseline",
                     "95% CI",
                 ],
@@ -385,8 +434,7 @@ def write_space(
             f'Code and raw results: <a href="{html.escape(repo_url)}">{html.escape(repo_url)}</a>.'
         )
     footer_parts.append(
-        "OpenJev is an independent open-weights model served by Codiv; "
-        "not affiliated with TypeSafe AI."
+        "Independent benchmark, not affiliated with TypeSafe AI. All runs on free tiers."
     )
 
     html_text = SPACE_TEMPLATE.format(
@@ -412,7 +460,7 @@ def write_space(
         "app_file: index.html\n"
         "pinned: false\n"
         "license: mit\n"
-        "short_description: Jev 1.13 vs OpenJev vs NVIDIA in English RAG\n"
+        "short_description: Jev 1.13 vs NVIDIA in English RAG, free to rerun\n"
         "---\n\n"
         "Static leaderboard generated by `jev-rag publish` from real benchmark runs.\n",
         encoding="utf-8",
@@ -448,9 +496,9 @@ def render_dataset_card(summaries: list[dict], repo_url: str | None = None) -> s
         "# Jev RAG Benchmark (English)",
         "",
         "Frozen-candidate-pool evaluation of **TypeSafe Jev 1.13** as the reranking",
-        "and decision layer of a RAG pipeline, compared with the free open-weights",
-        "**OpenJev** model and a **NVIDIA cross-encoder**, on English XQuAD and",
-        "SciFact. Every published run used free tiers (total cost: $0).",
+        "and decision layer of a RAG pipeline, compared with a **NVIDIA cross-encoder**",
+        "and with no reranking at all, on English XQuAD and SciFact. Every published",
+        "run used free tiers (total cost: $0).",
         "",
         "This repository contains the raw per-query artifacts, per-run reports with",
         "paired bootstrap confidence intervals, calibration tables, and a plain-text",
@@ -468,6 +516,25 @@ def render_dataset_card(summaries: list[dict], repo_url: str | None = None) -> s
             )
         )
         lines.append("")
+    rows = [row for summary in summaries for row in calibration_rows(summary)]
+    if rows:
+        lines.append("## Probability calibration (candidate-level relevance)")
+        lines.append("")
+        lines.append(
+            _markdown_table(
+                [
+                    "Dataset",
+                    "Model",
+                    "ECE (10 bin)",
+                    "Brier",
+                    "Top-1 accuracy",
+                    "Top-1 confidence (correct)",
+                    "Top-1 confidence (wrong)",
+                ],
+                rows,
+            )
+        )
+        lines.append("")
     rows = [row for summary in summaries for row in gated_rows(summary)]
     if rows:
         lines.append("## RAG optimization mode (confidence-partitioned, fixed t = 0.50)")
@@ -476,10 +543,11 @@ def render_dataset_card(summaries: list[dict], repo_url: str | None = None) -> s
             _markdown_table(
                 [
                     "Dataset",
+                    "Model",
                     "Threshold",
                     "A baseline nDCG@10",
-                    "J always-on nDCG@10",
-                    "G partitioned nDCG@10",
+                    "Always-on nDCG@10",
+                    "Partitioned nDCG@10",
                     "Delta vs baseline",
                     "95% CI",
                 ],
@@ -516,9 +584,8 @@ def render_dataset_card(summaries: list[dict], repo_url: str | None = None) -> s
     if repo_url:
         lines.extend(["## Links", "", f"- Code and protocol: {repo_url}", ""])
     lines.append(
-        "_OpenJev is an independent open-weights model served by Codiv; it is not "
-        "TypeSafe's Jev. Results describe the exact resolved model versions recorded "
-        "in each run manifest._"
+        "_Results describe the exact resolved model versions recorded in each run "
+        "manifest. This benchmark is independent and not affiliated with TypeSafe AI._"
     )
     return "\n".join(lines)
 
@@ -551,6 +618,12 @@ def stage_published(
             generation_target.mkdir(parents=True, exist_ok=True)
             shutil.copy2(generation_file, generation_target / Path(generation_file).name)
     (out / "leaderboard.txt").write_text(render_text_tables(summaries), encoding="utf-8")
+    charts_dir = Path("assets") / "benchmark"
+    if charts_dir.exists():
+        target = out / "charts"
+        if target.exists():
+            shutil.rmtree(target)
+        shutil.copytree(charts_dir, target)
     (out / "README.md").write_text(
         render_dataset_card(summaries, repo_url=repo_url), encoding="utf-8"
     )
