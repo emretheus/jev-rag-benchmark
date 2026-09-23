@@ -39,7 +39,7 @@ fixture runs are refused. Charts for these tables live in
 
 <!-- RESULTS:START -->
 
-_Generated 2026-09-23 09:49 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
+_Generated 2026-09-23 09:52 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
 _Regenerate with:_ `uv run jev-rag publish`
 
 ### Reranking (frozen top-20 candidates, same pool for every method)
@@ -137,6 +137,31 @@ for Laya, gateways for Jev and the LLM); Laya's own reported model latency is
 ![Tool selection accuracy by catalog size](assets/benchmark/toolbench-cardinality.svg)
 
 ![Accuracy by task family](assets/benchmark/toolbench-accuracy.svg)
+
+### Cost comparison
+
+Every published run executed on free tiers, so the actual spend was **$0**.
+The table prices the same work at list rates so the comparison survives outside
+free tiers.
+
+| Workload | Tokens | Actual paid | List-price equivalent |
+|---|---|---|---|
+| RAG reranking, Jev (1,490 queries) | 7,819,658 input | $0 (Vercel free tier) | **$0.328** — $0.22 per 1k queries, $0.00022 per query |
+| RAG reranking, NVIDIA cross-encoder | 6,831,639 input | $0 (NIM trial) | not published for this endpoint |
+| Embeddings (corpus + queries) | ~5.4M input | $0 (NIM trial) | not published for this endpoint |
+| Answer generation, DiffusionGemma 26B (1,190 answers) | 1.24M prompt + 53k output | $0 (Codiv free tier) | self-hosted: ~$0.10–0.30 of GPU time (estimate) |
+| Toolbench, Jev (160 decisions) | 114,539 input (716/decision) | $0 (free tier) | **$0.0048** — $0.030 per 1k decisions |
+| Toolbench, LLM baseline | 61,542 input + output | $0 (free tier) | self-hosted GPU time |
+| Toolbench, Laya (160 decisions) | 13,989 input (87/decision) | $0 (HF Space) | self-hosted: **$0.0006 per 1k decisions** (7.2 ms/decision batched on a T4 at $0.30/h) |
+
+Reading it honestly: Jev costs about **$0.22 per 1,000 reranked queries** and
+**$0.03 per 1,000 decisions** at these prompt sizes — cheap in absolute terms,
+and roughly 2x cheaper per query than the prior Turkish benchmark measured
+($0.00039/query). Laya is roughly 50x cheaper per decision once self-hosted,
+but it cannot serve the large-catalog cases at all. The LLM baseline has no
+published per-token price at these providers; self-hosting it costs GPU time
+like Laya. Estimates use a T4 at $0.30/hour; NVIDIA list prices for the
+reranker and embedding endpoints are not published.
 
 What the table shows, honestly: **a free LLM matches Jev on accuracy** here
 (selection 82.5% vs 85%, approval 80% vs 70%, validation and injection tied at

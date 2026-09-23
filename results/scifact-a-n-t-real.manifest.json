@@ -4,20 +4,18 @@
   "dataset": "scifact",
   "branches": [
     "A",
-    "N",
-    "T"
+    "T",
+    "N"
   ],
   "results_file": "results/scifact-a-n-t-real.jsonl",
   "queries_total": 300,
   "queries_in_file": 300,
   "queries_skipped_this_run": 0,
-  "completed_at": "2026-09-21T20:36:24.476983+00:00",
+  "completed_at": "2026-09-23T09:52:25.566365+00:00",
   "models": {
     "embedding": "nvidia/nemotron-3-embed-1b",
-    "systemone_requested": "openjev-0.1",
-    "systemone_resolved": [],
-    "systemone_typesafe_requested": "typesafe/jev-1.13",
-    "systemone_typesafe_resolved": [
+    "systemone_requested": "typesafe-ai/jev",
+    "systemone_resolved": [
       "typesafe-ai/jev"
     ],
     "reranker_requested": "nvidia/llama-nemotron-rerank-vl-1b-v2",
@@ -27,12 +25,10 @@
     "generator": "diffusiongemma-26b"
   },
   "totals": {
-    "systemone_input_tokens": 0,
-    "systemone_typesafe_input_tokens": 2411716,
-    "systemone_typesafe_cost_usd": 0.0,
+    "systemone_input_tokens": 2411716,
+    "systemone_cost_usd": 0.0,
     "nvidia_rerank_prompt_tokens": 2179282,
-    "systemone_requests": 0,
-    "systemone_typesafe_requests": 300
+    "systemone_requests": 300
   },
   "dataset_meta": {
     "dataset": "scifact",
@@ -82,26 +78,15 @@
         "requests_per_minute": 40
       },
       "systemone": {
-        "provider": "codiv",
-        "base_url": "https://api.codiv.ai",
+        "provider": "vercel",
+        "base_url": "https://ai-gateway.vercel.sh/typesafe",
         "decisions_path": "/v1/systemone",
-        "api_key_env": "TYPESAFE_API_KEY",
-        "model": "openjev-0.1",
+        "api_key_env": "AI_GATEWAY_API_KEY",
+        "model": "typesafe-ai/jev",
         "instruction_template": "Passage [{index}] contains information that is needed to answer the question",
         "max_passage_chars": 4000,
         "max_state_chars": 200000,
-        "requests_per_minute": 600
-      },
-      "systemone_typesafe": {
-        "provider": "openrouter",
-        "base_url": "https://openrouter.ai/api",
-        "decisions_path": "/alpha/decisions",
-        "api_key_env": "OPENROUTER_API_KEY",
-        "model": "typesafe/jev-1.13",
-        "instruction_template": "Passage [{index}] contains information that is needed to answer the question",
-        "max_passage_chars": 4000,
-        "max_state_chars": 200000,
-        "requests_per_minute": 300
+        "requests_per_minute": 60
       },
       "generator": {
         "provider": "codiv",
@@ -118,15 +103,12 @@
       "max_context_chars": 6000
     },
     "pricing": {
-      "openjev_usd_per_mtok": 0.0,
       "jev_usd_per_mtok": 0.042,
       "other_usd_per_mtok": 0.0
     },
     "safety": {
-      "max_systemone_requests": 20000,
-      "max_systemone_input_tokens": 90000000,
-      "max_typesafe_requests": 5000,
-      "max_typesafe_input_tokens": 16000000
+      "max_systemone_requests": 5000,
+      "max_systemone_input_tokens": 16000000
     }
   }
 }
