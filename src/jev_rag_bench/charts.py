@@ -147,7 +147,7 @@ def _bar_chart(
 
 def reranker_comparison(summaries: list[dict]) -> str:
     datasets = [summary["dataset"] for summary in summaries]
-    branches = ["A", "T", "N"]
+    branches = ["A", "T", "N", "L"]
     available = [
         branch
         for branch in branches
@@ -511,4 +511,76 @@ def render_charts(
                 width=CARD_WIDTH,
                 height=CARD_HEIGHT,
             )
+    return written
+
+MODEL_COLORS = {"jev": "#f08c00", "laya": "#4c6ef5"}
+
+
+def toolbench_accuracy(summary: dict) -> str:
+    models = list((summary.get("models") or {}).keys())
+    families = ["tool_selection", "call_approval", "arg_validation", "injection_risk"]
+    series = []
+    for model in models:
+        model_summary = summary["models"][model]
+        values = [
+            model_summary.get("families", {}).get(family, {}).get("accuracy", 0.0)
+            for family in families
+        ]
+        series.append(
+            (
+                model,
+                values,
+                [],
+                [],
+                MODEL_COLORS.get(model, "#868e96"),
+            )
+        )
+    return _bar_chart(
+        "Tool-calling governance: accuracy by task family",
+        families,
+        series,
+        (0.0, 1.0),
+    )
+
+
+def toolbench_cardinality(summary: dict) -> str:
+    models = list((summary.get("models") or {}).keys())
+    sizes = sorted(
+        {
+            size
+            for model in models
+            for size in (summary["models"][model].get("cardinality_scaling") or {})
+        },
+        key=lambda value: int(value),
+    )
+    series = []
+    for model in models:
+        scaling = summary["models"][model].get("cardinality_scaling") or {}
+        values = [float(scaling.get(size, 0.0)) for size in sizes]
+        series.append((model, values, [], [], MODEL_COLORS.get(model, "#868e96")))
+    return _bar_chart(
+        "Tool selection accuracy by catalog size (choice question)",
+        [f"{size} tools" for size in sizes],
+        series,
+        (0.0, 1.0),
+    )
+
+
+def render_toolbench_charts(
+    summary: dict,
+    output_dir: str | Path,
+    png: bool = True,
+) -> list[Path]:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written = []
+    for name, svg_text in (
+        ("toolbench-accuracy", toolbench_accuracy(summary)),
+        ("toolbench-cardinality", toolbench_cardinality(summary)),
+    ):
+        svg_path = output_dir / f"{name}.svg"
+        svg_path.write_text(svg_text, encoding="utf-8")
+        written.append(svg_path)
+        if png:
+            svg_to_png(svg_path, output_dir / f"{name}.png")
     return written

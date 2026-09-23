@@ -8,7 +8,7 @@ from pathlib import Path
 from . import data as data_module
 from .audit import load_audits, retrieval_audit, write_audit
 from .bm25 import BM25
-from .charts import render_charts
+from .charts import render_charts, render_toolbench_charts
 from .clients.systemone import build_state
 from .config import api_key, load_config, load_dotenv
 from .generate import ChatGenerator, load_rows, replay_generator
@@ -24,7 +24,8 @@ from .publish import (
 )
 from .report import generate_report
 from .retrieval import corpus_text
-from .run import add_branch, build_clients, run_benchmark
+from .run import add_branch, build_clients, merge_branch_scores, run_benchmark
+from .toolbench import FAMILIES, run_toolbench
 
 CODIV_FREE_QUOTA_TOKENS = 100_000_000
 
@@ -265,17 +266,17 @@ def _cmd_audit(cfg: dict, args: argparse.Namespace) -> int:
     print("|---|---|---|")
     for bm25_row, hybrid_row in zip(audit["bm25"], audit["hybrid"], strict=False):
         label = f"top-{bm25_row['depth']}" if bm25_row["depth"] != "all" else "all"
-        print(
-            f"| {label} | {bm25_row['recall'] * 100:.3f}% | {hybrid_row['recall'] * 100:.3f}% |"
-        )
+        print(f"| {label} | {bm25_row['recall'] * 100:.3f}% | {hybrid_row['recall'] * 100:.3f}% |")
     print(f"audit: {json_path}")
     print(f"summary: {md_path}")
     return 0
 
 
 def _cmd_charts(cfg: dict, args: argparse.Namespace) -> int:
-    reports_dir = Path(args.reports_dir) if args.reports_dir else (
-        Path(cfg["paths"]["reports_dir"]) / "generated"
+    reports_dir = (
+        Path(args.reports_dir)
+        if args.reports_dir
+        else (Path(cfg["paths"]["reports_dir"]) / "generated")
     )
     summary_paths = sorted(reports_dir.glob("*/summary.json"))
     if not summary_paths:
@@ -284,8 +285,8 @@ def _cmd_charts(cfg: dict, args: argparse.Namespace) -> int:
     from .publish import load_summaries
 
     summaries = load_summaries(summary_paths)
-    audits_dir = Path(args.audits_dir) if args.audits_dir else (
-        Path(cfg["paths"]["reports_dir"]) / "audits"
+    audits_dir = (
+        Path(args.audits_dir) if args.audits_dir else (Path(cfg["paths"]["reports_dir"]) / "audits")
     )
     written = render_charts(
         summaries,
@@ -294,6 +295,13 @@ def _cmd_charts(cfg: dict, args: argparse.Namespace) -> int:
         png=not args.no_png,
         social_dir=args.social_dir,
     )
+    if args.toolbench_summary and Path(args.toolbench_summary).exists():
+        toolbench_summary = json.loads(Path(args.toolbench_summary).read_text(encoding="utf-8"))
+        written.extend(
+            render_toolbench_charts(
+                toolbench_summary, args.output_dir, png=not args.no_png
+            )
+        )
     for path in written:
         print(f"chart: {path}")
     return 0
@@ -367,12 +375,56 @@ def _cmd_verify(cfg: dict, args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_merge_scores(cfg: dict, args: argparse.Namespace) -> int:
+    try:
+        merge_branch_scores(cfg, args.results, args.scores, branch=args.branch.upper())
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _cmd_toolbench(cfg: dict, args: argparse.Namespace) -> int:
+    families = FAMILIES if args.families == "all" else [f.strip() for f in args.families.split(",")]
+    models = [m.strip() for m in args.models.split(",")]
+    output_dir = (
+        Path(args.output_dir)
+        if args.output_dir
+        else Path(cfg["paths"]["reports_dir"]) / "toolbench"
+    )
+    try:
+        result = run_toolbench(
+            cfg,
+            families=families,
+            per_family=args.per_family,
+            models=models,
+            output_dir=output_dir,
+        )
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    summary = result["summary"]
+    for model, model_summary in summary.get("models", {}).items():
+        print(f"== {model}")
+        for family, entry in model_summary.get("families", {}).items():
+            print(f"  {family:16s} n={entry['n']:4d}  accuracy={entry['accuracy'] * 100:.1f}%")
+        if "cardinality_scaling" in model_summary:
+            print(
+                "  cardinality scaling:",
+                {
+                    k: f"{v * 100:.1f}%"
+                    for k, v in model_summary["cardinality_scaling"].items()
+                },
+            )
+    print(f"summary: {result['summary_path']}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="jev-rag",
         description=(
-            "Free English RAG benchmark for TypeSafe Jev 1.13 "
-            "(no-reranker and NVIDIA baselines)."
+            "Free English RAG benchmark for TypeSafe Jev 1.13 (no-reranker and NVIDIA baselines)."
         ),
     )
     parser.add_argument(
@@ -444,6 +496,11 @@ def build_parser() -> argparse.ArgumentParser:
     charts_parser.add_argument("--audits-dir", default=None)
     charts_parser.add_argument("--output-dir", default="assets/benchmark")
     charts_parser.add_argument("--social-dir", default="assets/social")
+    charts_parser.add_argument(
+        "--toolbench-summary",
+        default=None,
+        help="path to reports/toolbench/toolbench-summary.json",
+    )
     charts_parser.add_argument("--no-png", action="store_true")
 
     stability_parser = subparsers.add_parser(
@@ -465,6 +522,21 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument("--limit", type=int, default=None)
     verify_parser.add_argument("--concurrency", type=int, default=4)
     verify_parser.add_argument("--fixture", action="store_true")
+
+    toolbench_parser = subparsers.add_parser(
+        "toolbench", help="tool-calling governance benchmark (4 families)"
+    )
+    toolbench_parser.add_argument("--families", default="all")
+    toolbench_parser.add_argument("--per-family", type=int, default=40)
+    toolbench_parser.add_argument("--models", default="jev,laya")
+    toolbench_parser.add_argument("--output-dir", default=None)
+
+    merge_parser = subparsers.add_parser(
+        "merge-scores", help="merge externally computed pointwise scores as a branch"
+    )
+    merge_parser.add_argument("--results", required=True)
+    merge_parser.add_argument("--scores", required=True)
+    merge_parser.add_argument("--branch", default="L")
 
     publish_parser = subparsers.add_parser(
         "publish", help="update the README results table and stage shareable artifacts"
@@ -504,6 +576,8 @@ def main(argv: list[str] | None = None) -> int:
         "charts": _cmd_charts,
         "stability": _cmd_stability,
         "verify": _cmd_verify,
+        "merge-scores": _cmd_merge_scores,
+        "toolbench": _cmd_toolbench,
         "publish": _cmd_publish,
     }
     return handlers[args.command](cfg, args)

@@ -1,4 +1,4 @@
-Jev RAG Benchmark - real runs - generated 2026-09-21 20:38 UTC
+Jev RAG Benchmark - real runs - generated 2026-09-23 09:28 UTC
 
 Reranking (frozen top-20 candidates)
 Dataset   n     Method                             nDCG@10  Recall@5  MRR@10  p50    

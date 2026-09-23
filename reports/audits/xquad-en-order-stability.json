@@ -1,0 +1,12 @@
+{
+  "dataset": "xquad-en",
+  "branch": "T",
+  "queries": 100,
+  "permutations": 3,
+  "calls": 300,
+  "failed_calls": 0,
+  "mean_spearman": 0.8881403508771929,
+  "mean_top5_jaccard": 0.7829761904761905,
+  "queries_with_gold_membership_change": 0,
+  "gold_membership_change_rate": 0.0
+}

@@ -1,0 +1,40 @@
+{
+  "n": 1159,
+  "mean_probability_correct": 0.8636893203883496,
+  "mean_probability_wrong": 0.8857292759706191,
+  "auc": 0.5055878727370898,
+  "sweep": [
+    {
+      "threshold": 0.5,
+      "kept": 1152,
+      "coverage": 0.993960310612597,
+      "precision_correct": 0.1736111111111111,
+      "wrong_answers_flagged": 1,
+      "wrong_answers_total": 953
+    },
+    {
+      "threshold": 0.7,
+      "kept": 1114,
+      "coverage": 0.9611734253666955,
+      "precision_correct": 0.17145421903052063,
+      "wrong_answers_flagged": 30,
+      "wrong_answers_total": 953
+    },
+    {
+      "threshold": 0.8,
+      "kept": 1047,
+      "coverage": 0.903364969801553,
+      "precision_correct": 0.166189111747851,
+      "wrong_answers_flagged": 80,
+      "wrong_answers_total": 953
+    },
+    {
+      "threshold": 0.9,
+      "kept": 704,
+      "coverage": 0.6074201898188093,
+      "precision_correct": 0.17329545454545456,
+      "wrong_answers_flagged": 371,
+      "wrong_answers_total": 953
+    }
+  ]
+}

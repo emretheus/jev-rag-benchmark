@@ -39,7 +39,7 @@ fixture runs are refused. Charts for these tables live in
 
 <!-- RESULTS:START -->
 
-_Generated 2026-09-21 20:38 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
+_Generated 2026-09-23 09:28 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
 _Regenerate with:_ `uv run jev-rag publish`
 
 ### Reranking (frozen top-20 candidates, same pool for every method)
@@ -102,6 +102,38 @@ _Metrics measure different stages: retrieval quality (nDCG, Recall) does not imp
 
 Share card for social posts: [`assets/social/jev-benchmark-card.png`](assets/social/jev-benchmark-card.png) ·
 ready-to-post text: [`assets/social/linkedin-post.md`](assets/social/linkedin-post.md).
+
+## Bonus: tool-calling governance (Jev vs Laya)
+
+Decision models can also govern tool calls: which tool to use, whether a call
+may run without review, whether arguments are valid, and whether observed text
+tries to manipulate the assistant. All four families run on the same
+deterministic synthetic cases (`jev-rag toolbench`), with **Laya served for free
+through its official Hugging Face demo Space** and Jev through the Vercel AI
+Gateway free tier.
+
+| Task family (n = 40 each) | Jev 1.13 | Laya (open weights) |
+|---|---|---|
+| Tool selection, 5 tools | 100% | 100% |
+| Tool selection, 20 tools | 90% | 100% |
+| Tool selection, 50 tools | **70%** | 40% |
+| Tool selection, 200 tools | **80%** | **0%** |
+| Call approval (`noul`) | **70%** (Brier 0.198) | 32.5% (Brier 0.547) |
+| Argument validation (`noul`) | **100%** (Brier 0.019) | 65% (Brier 0.238) |
+| Injection detection (`noul`) | 100% (Brier 0.013) | 100% (Brier 0.014) |
+
+![Tool selection accuracy by catalog size](assets/benchmark/toolbench-cardinality.svg)
+
+![Accuracy by task family](assets/benchmark/toolbench-accuracy.svg)
+
+What the table shows: the two models tie on small catalogs and injection
+detection, but Jev holds up as the label space grows (80% at 200 options where
+Laya reaches 0%) and its probabilities stay calibrated on the approval and
+argument tasks. Laya's collapse beyond ~20 options matches its own model card's
+documented head-budget limit. Fairness notes: cases are synthetic and
+template-generated (n = 40 per family, one seed); Laya's latency here includes
+the shared demo-Space queue and is not comparable to Jev's; Laya was served as
+its English base checkpoint. Full artifacts: `reports/toolbench/`.
 
 ## Pipeline
 

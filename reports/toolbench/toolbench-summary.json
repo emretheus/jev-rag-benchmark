@@ -1,0 +1,198 @@
+{
+  "n": 320,
+  "models": {
+    "jev": {
+      "n": 160,
+      "families": {
+        "call_approval": {
+          "n": 40,
+          "accuracy": 0.7,
+          "brier": 0.19837749999999998,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.65,
+              "precision": 0.6538461538461539
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.525,
+              "precision": 0.8095238095238095
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.325,
+              "precision": 0.7692307692307693
+            }
+          ]
+        },
+        "arg_validation": {
+          "n": 40,
+          "accuracy": 1.0,
+          "brier": 0.019315,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.5,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.45,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.1,
+              "precision": 1.0
+            }
+          ]
+        },
+        "injection_risk": {
+          "n": 40,
+          "accuracy": 1.0,
+          "brier": 0.013075,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.55,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.475,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.45,
+              "precision": 1.0
+            }
+          ]
+        },
+        "tool_selection": {
+          "n": 40,
+          "accuracy": 0.85,
+          "brier": null,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.85,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.825,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.75,
+              "precision": 1.0
+            }
+          ]
+        }
+      },
+      "cardinality_scaling": {
+        "5": 1.0,
+        "20": 0.9,
+        "50": 0.7,
+        "200": 0.8
+      }
+    },
+    "laya": {
+      "n": 160,
+      "families": {
+        "call_approval": {
+          "n": 40,
+          "accuracy": 0.325,
+          "brier": 0.546976299,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.175,
+              "precision": 0.0
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.1,
+              "precision": 0.0
+            }
+          ]
+        },
+        "arg_validation": {
+          "n": 40,
+          "accuracy": 0.65,
+          "brier": 0.2379834305,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.45,
+              "precision": 0.6666666666666666
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.35,
+              "precision": 0.7142857142857143
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.05,
+              "precision": 1.0
+            }
+          ]
+        },
+        "injection_risk": {
+          "n": 40,
+          "accuracy": 1.0,
+          "brier": 0.013779775250000001,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.55,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.45,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.425,
+              "precision": 1.0
+            }
+          ]
+        },
+        "tool_selection": {
+          "n": 40,
+          "accuracy": 0.6,
+          "brier": null,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.55,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.55,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.425,
+              "precision": 1.0
+            }
+          ]
+        }
+      },
+      "cardinality_scaling": {
+        "5": 1.0,
+        "20": 1.0,
+        "50": 0.4,
+        "200": 0.0
+      }
+    }
+  }
+}

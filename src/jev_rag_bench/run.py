@@ -359,6 +359,72 @@ def add_branch(
     return results_path
 
 
+def merge_branch_scores(
+    cfg: dict,
+    results_path: str | Path,
+    scores_path: str | Path,
+    branch: str = "L",
+) -> Path:
+    """Merge externally computed pointwise scores (e.g. local Laya) as a branch."""
+    results_path = Path(results_path)
+    scores_path = Path(scores_path)
+    rows = [
+        json.loads(line)
+        for line in results_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    scores = {
+        str(row["query_id"]): row
+        for row in (
+            json.loads(line)
+            for line in scores_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        )
+    }
+    merged = 0
+    for row in rows:
+        score = scores.get(str(row["query_id"]))
+        if not score:
+            continue
+        probabilities = [float(p) for p in score["probs"]]
+        if len(probabilities) != len(row["candidates"]):
+            raise ValueError(
+                f"score length mismatch for {row['query_id']}: "
+                f"{len(probabilities)} vs {len(row['candidates'])}"
+            )
+        ranked = sorted(
+            range(len(row["candidates"])),
+            key=lambda index: (-probabilities[index], index),
+        )
+        order = [row["candidates"][index]["doc_id"] for index in ranked]
+        gold = set(row["gold_doc_ids"])
+        row.setdefault("branches", {})[branch] = {
+            "order": order,
+            "scores": probabilities,
+            "probs": probabilities,
+            "latency_ms": score.get("latency_ms"),
+            "resolved_model": score.get("model"),
+            "input_tokens": None,
+            "state_chars": None,
+            "cost_usd": 0.0,
+        }
+        row.setdefault("metrics", {})[branch] = {
+            "recall@5": recall_at_k(order, gold, 5),
+            "recall@10": recall_at_k(order, gold, 10),
+            "ndcg@10": ndcg_at_k(order, gold, 10),
+            "mrr@10": mrr_at_k(order, gold, 10),
+        }
+        merged += 1
+
+    temp_path = results_path.with_suffix(".jsonl.tmp")
+    with open(temp_path, "w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    temp_path.replace(results_path)
+    print(f"merged branch {branch} into {merged}/{len(rows)} rows: {results_path}")
+    return results_path
+
+
 def _check_request_caps(cfg: dict, query_count: int, branches: list[str]) -> None:
     if "T" in branches:
         cap = int(cfg["safety"].get("max_systemone_requests", 5000))

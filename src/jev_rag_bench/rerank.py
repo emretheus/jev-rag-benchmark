@@ -10,11 +10,12 @@ BRANCH_LABELS = {
     "A": "no reranker (hybrid order)",
     "T": "TypeSafe Jev 1.13 batch noul",
     "N": "NVIDIA cross-encoder reranker",
+    "L": "Laya (local, pointwise noul)",
 }
 
 DEFAULT_BRANCHES = ["A", "T", "N"]
 
-ALL_BRANCHES = ["A", "T", "N"]
+ALL_BRANCHES = ["A", "T", "N", "L"]
 
 
 @dataclass

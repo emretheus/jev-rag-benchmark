@@ -64,7 +64,7 @@ def _method_label(branch: str, stats: dict) -> str:
 
 def rerank_rows(summary: dict) -> list[list[str]]:
     rows = []
-    for branch in ("A", "T", "N"):
+    for branch in ("A", "T", "N", "L"):
         stats = summary.get("branches", {}).get(branch)
         if not stats:
             continue
@@ -566,6 +566,10 @@ def render_dataset_card(summaries: list[dict], repo_url: str | None = None) -> s
             "  risk-coverage, interpretation limits.",
             "- `<run>/summary.json` / `summary.csv` — machine-readable aggregates.",
             "- `leaderboard.txt` — plain-text tables.",
+            "- `toolbench/` — tool-calling governance results (tool selection,",
+            "  call approval, argument validation, injection detection) for Jev vs",
+            "  Laya, plus charts.",
+            "- `charts/` — SVG/PNG charts for the tables above.",
             "",
             "## Reproduce",
             "",
@@ -618,6 +622,12 @@ def stage_published(
             generation_target.mkdir(parents=True, exist_ok=True)
             shutil.copy2(generation_file, generation_target / Path(generation_file).name)
     (out / "leaderboard.txt").write_text(render_text_tables(summaries), encoding="utf-8")
+    toolbench_dir = Path("reports") / "toolbench"
+    if toolbench_dir.exists():
+        target = out / "toolbench"
+        if target.exists():
+            shutil.rmtree(target)
+        shutil.copytree(toolbench_dir, target)
     charts_dir = Path("assets") / "benchmark"
     if charts_dir.exists():
         target = out / "charts"
