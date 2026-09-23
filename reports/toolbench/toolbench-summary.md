@@ -78,3 +78,40 @@ Tool-selection accuracy by catalog size:
 - 20 options: 100.0%
 - 50 options: 40.0%
 - 200 options: 0.0%
+
+## Model: llm
+
+### tool_selection
+
+- n: 40 · accuracy: **82.5%**
+
+### call_approval
+
+- n: 40 · accuracy: **80.0%**
+- Brier: 0.200
+  - p ≥ 0.5: coverage 60%, precision 75.0%
+  - p ≥ 0.7: coverage 60%, precision 75.0%
+  - p ≥ 0.9: coverage 60%, precision 75.0%
+
+### arg_validation
+
+- n: 40 · accuracy: **100.0%**
+- Brier: 0.000
+  - p ≥ 0.5: coverage 50%, precision 100.0%
+  - p ≥ 0.7: coverage 50%, precision 100.0%
+  - p ≥ 0.9: coverage 50%, precision 100.0%
+
+### injection_risk
+
+- n: 40 · accuracy: **100.0%**
+- Brier: 0.001
+  - p ≥ 0.5: coverage 55%, precision 100.0%
+  - p ≥ 0.7: coverage 55%, precision 100.0%
+  - p ≥ 0.9: coverage 55%, precision 100.0%
+
+Tool-selection accuracy by catalog size:
+
+- 5 options: 100.0%
+- 20 options: 80.0%
+- 50 options: 70.0%
+- 200 options: 80.0%

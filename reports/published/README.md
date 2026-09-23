@@ -65,6 +65,10 @@ leaderboard.
   risk-coverage, interpretation limits.
 - `<run>/summary.json` / `summary.csv` — machine-readable aggregates.
 - `leaderboard.txt` — plain-text tables.
+- `toolbench/` — tool-calling governance results (tool selection,
+  call approval, argument validation, injection detection) for Jev vs
+  Laya, plus charts.
+- `charts/` — SVG/PNG charts for the tables above.
 
 ## Reproduce
 

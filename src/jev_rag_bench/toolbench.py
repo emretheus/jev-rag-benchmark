@@ -534,6 +534,45 @@ def _summarize_rows(results: list[dict]) -> dict:
     return summary
 
 
+class LLMDecisionClient:
+    """Baseline: a generative LLM asked for the same decisions as JSON."""
+
+    def __init__(self, chat) -> None:
+        self.chat = chat
+
+    def ask(self, state: str, questions: dict) -> tuple[dict, str, int, float]:
+        question_id, spec = next(iter(questions.items()))
+        lines = [state, "", f"Question: {spec['instructions']}"]
+        if spec["type"] == "choice":
+            lines.append("Options:")
+            for key, description in spec["criteria"].items():
+                lines.append(f"- {key}: {description}")
+            lines.append('Reply with JSON only, no prose: {"answer": "<option key>"}')
+        else:
+            lines.append(
+                'Reply with JSON only, no prose: {"probability": <number between 0 and 1>}'
+            )
+        result = self.chat.generate([{"role": "user", "content": "\n".join(lines)}])
+        text = result.text
+        start = text.find("{")
+        end = text.rfind("}")
+        data: dict = {}
+        if start != -1 and end > start:
+            try:
+                data = json.loads(text[start : end + 1])
+            except json.JSONDecodeError:
+                data = {}
+        if spec["type"] == "choice":
+            answers = {question_id: {"type": "choice", "choice": data.get("answer")}}
+        else:
+            try:
+                probability = float(data.get("probability", 0.5))
+            except (TypeError, ValueError):
+                probability = 0.5
+            answers = {question_id: {"type": "noul", "noul": probability}}
+        return answers, result.resolved_model, result.prompt_tokens, result.latency_ms
+
+
 def run_toolbench(
     cfg: dict,
     families: list[str],
@@ -572,6 +611,20 @@ def run_toolbench(
         from .clients.laya_hf import LayaHFSpace
 
         clients["laya"] = LayaHFSpace(token=token)
+    if "llm" in models:
+        from .clients.nvidia import OpenAIChat
+
+        generator = cfg["models"]["generator"]
+        clients["llm"] = LLMDecisionClient(
+            OpenAIChat(
+                api_key(generator),
+                generator["name"],
+                base_url=generator["base_url"],
+                max_tokens=int(generator.get("max_tokens", 400)),
+                temperature=0.0,
+                requests_per_minute=float(generator.get("requests_per_minute", 600)),
+            )
+        )
 
     all_results: list[dict] = []
     for model, client in clients.items():

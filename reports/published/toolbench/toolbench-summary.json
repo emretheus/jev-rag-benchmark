@@ -1,5 +1,5 @@
 {
-  "n": 320,
+  "n": 480,
   "models": {
     "jev": {
       "n": 160,
@@ -192,6 +192,87 @@
         "20": 1.0,
         "50": 0.4,
         "200": 0.0
+      }
+    },
+    "llm": {
+      "n": 160,
+      "families": {
+        "tool_selection": {
+          "n": 40,
+          "accuracy": 0.825
+        },
+        "call_approval": {
+          "n": 40,
+          "accuracy": 0.8,
+          "brier": 0.2,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.6,
+              "precision": 0.75
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.6,
+              "precision": 0.75
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.6,
+              "precision": 0.75
+            }
+          ]
+        },
+        "arg_validation": {
+          "n": 40,
+          "accuracy": 1.0,
+          "brier": 0.0,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.5,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.5,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.5,
+              "precision": 1.0
+            }
+          ]
+        },
+        "injection_risk": {
+          "n": 40,
+          "accuracy": 1.0,
+          "brier": 0.0005850000000000006,
+          "selective": [
+            {
+              "threshold": 0.5,
+              "coverage": 0.55,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.7,
+              "coverage": 0.55,
+              "precision": 1.0
+            },
+            {
+              "threshold": 0.9,
+              "coverage": 0.55,
+              "precision": 1.0
+            }
+          ]
+        }
+      },
+      "cardinality_scaling": {
+        "5": 1.0,
+        "20": 0.8,
+        "50": 0.7,
+        "200": 0.8
       }
     }
   }

@@ -513,7 +513,7 @@ def render_charts(
             )
     return written
 
-MODEL_COLORS = {"jev": "#f08c00", "laya": "#4c6ef5"}
+MODEL_COLORS = {"jev": "#f08c00", "laya": "#4c6ef5", "llm": "#37b24d"}
 
 
 def toolbench_accuracy(summary: dict) -> str:
