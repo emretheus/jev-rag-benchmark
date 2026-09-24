@@ -52,9 +52,7 @@ def _text(
     )
 
 
-def _rect(
-    x: float, y: float, width: float, height: float, fill: str, opacity: float = 1.0
-) -> str:
+def _rect(x: float, y: float, width: float, height: float, fill: str, opacity: float = 1.0) -> str:
     return (
         f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(width, 0.5):.1f}" '
         f'height="{max(height, 0.5):.1f}" fill="{fill}" opacity="{opacity}"/>'
@@ -138,9 +136,7 @@ def _bar_chart(
     legend_x = x0
     for legend_label, _, _, _, color in series:
         parts.append(_rect(legend_x, HEIGHT - 30, 12, 12, color))
-        parts.append(
-            _text(legend_x + 18, HEIGHT - 20, legend_label, size=12, fill="#495057")
-        )
+        parts.append(_text(legend_x + 18, HEIGHT - 20, legend_label, size=12, fill="#495057"))
         legend_x += 20 + len(legend_label) * 7.5
     return _svg("".join(parts), title)
 
@@ -149,9 +145,7 @@ def reranker_comparison(summaries: list[dict]) -> str:
     datasets = [summary["dataset"] for summary in summaries]
     branches = ["A", "T", "N", "L"]
     available = [
-        branch
-        for branch in branches
-        if all(branch in summary["branches"] for summary in summaries)
+        branch for branch in branches if all(branch in summary["branches"] for summary in summaries)
     ]
     values = {
         branch: [summary["branches"][branch]["ndcg@10"] for summary in summaries]
@@ -204,9 +198,7 @@ def calibration_reliability(summaries: list[dict]) -> str:
     for summary in summaries:
         color = DATASET_COLORS.get(summary["dataset"], "#f08c00")
         parts.append(_circle(legend_x + 6, HEIGHT - 24, 6, color))
-        parts.append(
-            _text(legend_x + 18, HEIGHT - 20, summary["dataset"], size=12, fill="#495057")
-        )
+        parts.append(_text(legend_x + 18, HEIGHT - 20, summary["dataset"], size=12, fill="#495057"))
         legend_x += 40 + len(summary["dataset"]) * 8
     parts.append(
         _text(
@@ -513,6 +505,7 @@ def render_charts(
             )
     return written
 
+
 MODEL_COLORS = {"jev": "#f08c00", "laya": "#4c6ef5", "llm": "#37b24d"}
 
 
@@ -583,4 +576,39 @@ def render_toolbench_charts(
         written.append(svg_path)
         if png:
             svg_to_png(svg_path, output_dir / f"{name}.png")
+    return written
+
+
+def answerability_gating(summary: dict) -> str:
+    sweep = summary.get("generation_gating") or []
+    groups = [
+        ("no gate" if row["threshold"] == 0.0 else f"p >= {row['threshold']:.1f}") for row in sweep
+    ]
+    series = [
+        ("coverage", [row["coverage"] for row in sweep], [], [], "#868e96"),
+        ("mean F1", [row["mean_f1"] for row in sweep], [], [], "#f08c00"),
+        ("success rate", [row["success_rate"] for row in sweep], [], [], "#4c6ef5"),
+    ]
+    return _bar_chart(
+        "Answerability gating: what skipping low-confidence queries costs",
+        groups,
+        series,
+        (0.0, 1.0),
+    )
+
+
+def render_answerability_charts(
+    summary: dict,
+    output_dir: str | Path,
+    png: bool = True,
+) -> list[Path]:
+    if not summary.get("generation_gating"):
+        return []
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    svg_path = output_dir / "answerability-gating.svg"
+    svg_path.write_text(answerability_gating(summary), encoding="utf-8")
+    written = [svg_path]
+    if png:
+        svg_to_png(svg_path, output_dir / "answerability-gating.png")
     return written

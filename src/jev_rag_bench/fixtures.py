@@ -64,6 +64,19 @@ class FixtureReranker:
 
 
 class FixtureSystemOne:
+    def ask(self, state: str, questions: dict):
+        question_id = next(iter(questions))
+        passages_block = state.split("Passages:", 1)[-1]
+        question_line = state.split("Question:", 1)[-1].split("Passages:", 1)[0]
+        overlap = _overlap(question_line, passages_block)
+        probability = min(0.999, max(0.001, 0.1 + overlap))
+        return (
+            {"answers": {question_id: {"type": "noul", "noul": probability}}},
+            "fixture-openjev",
+            0,
+            0.0,
+        )
+
     def score_relevance(self, question: str, passages: list[str]) -> SystemOneResult:
         probabilities = []
         for index, passage in enumerate(passages):

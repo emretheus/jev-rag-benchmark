@@ -6,9 +6,10 @@ import sys
 from pathlib import Path
 
 from . import data as data_module
+from .answerability import run_answerability, summarize_answerability
 from .audit import load_audits, retrieval_audit, write_audit
 from .bm25 import BM25
-from .charts import render_charts, render_toolbench_charts
+from .charts import render_answerability_charts, render_charts, render_toolbench_charts
 from .clients.systemone import build_state
 from .config import api_key, load_config, load_dotenv
 from .generate import ChatGenerator, load_rows, replay_generator
@@ -298,9 +299,14 @@ def _cmd_charts(cfg: dict, args: argparse.Namespace) -> int:
     if args.toolbench_summary and Path(args.toolbench_summary).exists():
         toolbench_summary = json.loads(Path(args.toolbench_summary).read_text(encoding="utf-8"))
         written.extend(
-            render_toolbench_charts(
-                toolbench_summary, args.output_dir, png=not args.no_png
-            )
+            render_toolbench_charts(toolbench_summary, args.output_dir, png=not args.no_png)
+        )
+    if args.answerability_summary and Path(args.answerability_summary).exists():
+        answerability_summary = json.loads(
+            Path(args.answerability_summary).read_text(encoding="utf-8")
+        )
+        written.extend(
+            render_answerability_charts(answerability_summary, args.output_dir, png=not args.no_png)
         )
     for path in written:
         print(f"chart: {path}")
@@ -411,12 +417,47 @@ def _cmd_toolbench(cfg: dict, args: argparse.Namespace) -> int:
         if "cardinality_scaling" in model_summary:
             print(
                 "  cardinality scaling:",
-                {
-                    k: f"{v * 100:.1f}%"
-                    for k, v in model_summary["cardinality_scaling"].items()
-                },
+                {k: f"{v * 100:.1f}%" for k, v in model_summary["cardinality_scaling"].items()},
             )
     print(f"summary: {result['summary_path']}")
+    return 0
+
+
+def _cmd_answerability(cfg: dict, args: argparse.Namespace) -> int:
+    run_kind = "fixture" if args.fixture else "real"
+    try:
+        path = run_answerability(
+            cfg,
+            args.results,
+            negatives_per_query=args.negatives_per_query,
+            limit=args.limit,
+            concurrency=args.concurrency,
+            run_kind=run_kind,
+        )
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    summary = summarize_answerability(path, args.generation)
+    output_dir = Path(cfg["paths"]["reports_dir"]) / "audits"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = output_dir / f"{Path(args.results).stem}-answerability-summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    if summary:
+        print(
+            f"n={summary['n']} accuracy={summary['accuracy'] * 100:.1f}% "
+            f"brier={summary['brier']:.3f} ece={summary['ece_10bin']:.3f}"
+        )
+        print(
+            f"mean p matched={summary['mean_probability_matched']:.3f} "
+            f"mismatched={summary['mean_probability_mismatched']:.3f}"
+        )
+        for row in summary.get("generation_gating", []):
+            print(
+                f"  t={row['threshold']:.1f}: coverage {row['coverage'] * 100:.1f}% "
+                f"F1 {row['mean_f1'] * 100:.2f}% success {row['success_rate'] * 100:.2f}% "
+                f"({row['success_per_1000_queries']:.0f} per 1k)"
+            )
+    print(f"summary: {summary_path}")
     return 0
 
 
@@ -501,6 +542,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="path to reports/toolbench/toolbench-summary.json",
     )
+    charts_parser.add_argument(
+        "--answerability-summary",
+        default=None,
+        help="path to reports/audits/*-answerability-summary.json",
+    )
     charts_parser.add_argument("--no-png", action="store_true")
 
     stability_parser = subparsers.add_parser(
@@ -522,6 +568,16 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument("--limit", type=int, default=None)
     verify_parser.add_argument("--concurrency", type=int, default=4)
     verify_parser.add_argument("--fixture", action="store_true")
+
+    answerability_parser = subparsers.add_parser(
+        "answerability", help="answerability/abstention cases and generation-gating simulation"
+    )
+    answerability_parser.add_argument("--results", required=True)
+    answerability_parser.add_argument("--generation", default=None)
+    answerability_parser.add_argument("--negatives-per-query", type=int, default=1)
+    answerability_parser.add_argument("--limit", type=int, default=None)
+    answerability_parser.add_argument("--concurrency", type=int, default=4)
+    answerability_parser.add_argument("--fixture", action="store_true")
 
     toolbench_parser = subparsers.add_parser(
         "toolbench", help="tool-calling governance benchmark (4 families)"
@@ -578,6 +634,7 @@ def main(argv: list[str] | None = None) -> int:
         "verify": _cmd_verify,
         "merge-scores": _cmd_merge_scores,
         "toolbench": _cmd_toolbench,
+        "answerability": _cmd_answerability,
         "publish": _cmd_publish,
     }
     return handlers[args.command](cfg, args)
