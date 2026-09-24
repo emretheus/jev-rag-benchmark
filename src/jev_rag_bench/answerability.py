@@ -22,6 +22,7 @@ from statistics import mean
 
 from . import data as data_module
 from .clients.systemone import extract_noul_probability
+from .metrics import bootstrap_ci
 from .retrieval import corpus_text
 from .run import build_clients
 
@@ -186,11 +187,17 @@ def summarize_answerability(
         observed = mean([label for _, label in bucket])
         ece += len(bucket) / len(rows) * abs(confidence - observed)
 
+    correctness = [
+        1.0 if (p >= 0.5) == (label >= 0.5) else 0.0
+        for p, label in zip(probabilities, labels, strict=False)
+    ]
+    _, acc_low, acc_high = bootstrap_ci(correctness, seed=13)
     summary: dict = {
         "n": len(rows),
         "matched": sum(1 for row in rows if row["kind"] == "matched"),
         "mismatched": sum(1 for row in rows if row["kind"] == "mismatched"),
         "accuracy": accuracy,
+        "accuracy_ci": [acc_low, acc_high],
         "brier": brier,
         "ece_10bin": ece,
         "mean_probability_matched": mean(

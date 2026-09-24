@@ -1,0 +1,77 @@
+{
+  "n": 835,
+  "matched": 420,
+  "mismatched": 415,
+  "accuracy": 0.9748502994011976,
+  "accuracy_ci": [
+    0.9640718562874252,
+    0.9844311377245509
+  ],
+  "brier": 0.01987556886227545,
+  "ece_10bin": 0.054,
+  "mean_probability_matched": 0.8940476190476191,
+  "mean_probability_mismatched": 0.018867469879518074,
+  "risk_coverage": [
+    {
+      "threshold": 0.3,
+      "coverage": 0.4994011976047904,
+      "precision": 0.9928057553956835,
+      "recall": 0.9857142857142858
+    },
+    {
+      "threshold": 0.5,
+      "coverage": 0.4802395209580838,
+      "precision": 0.9975062344139651,
+      "recall": 0.9523809523809523
+    },
+    {
+      "threshold": 0.7,
+      "coverage": 0.4538922155688623,
+      "precision": 0.9973614775725593,
+      "recall": 0.9
+    },
+    {
+      "threshold": 0.9,
+      "coverage": 0.38203592814371257,
+      "precision": 1.0,
+      "recall": 0.7595238095238095
+    }
+  ],
+  "generation_gating": [
+    {
+      "threshold": 0.0,
+      "coverage": 1.0,
+      "mean_f1": 0.2994332228176702,
+      "success_rate": 0.13333333333333333,
+      "success_per_1000_queries": 133.33333333333334
+    },
+    {
+      "threshold": 0.3,
+      "coverage": 0.9857142857142858,
+      "mean_f1": 0.30090967535766544,
+      "success_rate": 0.13526570048309178,
+      "success_per_1000_queries": 133.33333333333331
+    },
+    {
+      "threshold": 0.5,
+      "coverage": 0.9523809523809523,
+      "mean_f1": 0.3069762381877406,
+      "success_rate": 0.14,
+      "success_per_1000_queries": 133.33333333333337
+    },
+    {
+      "threshold": 0.7,
+      "coverage": 0.9,
+      "mean_f1": 0.30898645958969245,
+      "success_rate": 0.13756613756613756,
+      "success_per_1000_queries": 123.80952380952381
+    },
+    {
+      "threshold": 0.9,
+      "coverage": 0.7595238095238095,
+      "mean_f1": 0.30687497325702445,
+      "success_rate": 0.12225705329153605,
+      "success_per_1000_queries": 92.85714285714286
+    }
+  ]
+}

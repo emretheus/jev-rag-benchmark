@@ -39,7 +39,7 @@ fixture runs are refused. Charts for these tables live in
 
 <!-- RESULTS:START -->
 
-_Generated 2026-09-23 09:52 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
+_Generated 2026-09-24 12:09 UTC from real runs (scifact, xquad-en). Fixture runs are never published._
 _Regenerate with:_ `uv run jev-rag publish`
 
 ### Reranking (frozen top-20 candidates, same pool for every method)
@@ -102,6 +102,38 @@ _Metrics measure different stages: retrieval quality (nDCG, Recall) does not imp
 
 Share card for social posts: [`assets/social/jev-benchmark-card.png`](assets/social/jev-benchmark-card.png) ·
 ready-to-post text: [`assets/social/linkedin-post.md`](assets/social/linkedin-post.md).
+
+## Answerability / abstention
+
+Jev was asked one `noul` question per case: *the passages contain enough
+information to answer the question*. Cases are the query's own frozen top-5
+(matched, answerable) and another query's top-5 that excludes the gold passage
+(mismatched, not answerable). Sampled run: **835 cases (420 matched / 415
+mismatched)** — a subset of the 2,352 planned, due to free-tier pacing.
+
+| Metric | Value |
+|---|---|
+| Accuracy | **97.5%** (95% CI 96.4–98.4) |
+| Brier / ECE (10 bins) | 0.020 / 0.054 |
+| Mean probability, answerable vs not | 0.894 vs 0.019 |
+
+Joined with the frozen generation F1s, this score can gate generation:
+
+| Gate | Coverage | Mean F1 | Success (F1 ≥ 0.5) | Successful answers per 1k queries |
+|---|---|---|---|---|
+| none | 100% | 29.94% | 13.33% | 133 |
+| p ≥ 0.5 | 95.2% | **30.70%** | **14.00%** | **133** |
+| p ≥ 0.7 | 90.0% | 30.90% | 13.76% | 124 |
+| p ≥ 0.9 | 76.0% | 30.69% | 12.23% | 93 |
+
+Reading: the check is accurate and calibrated, and gating at p ≥ 0.5 removes
+~5% of generation calls **without losing a single successful answer per thousand
+queries** — quality among kept calls even rises slightly. Past 0.7 the gate is
+too aggressive for this dataset. Scope: negatives are synthetic (another
+query's contexts), and XQuAD contains only answerable questions, so a real
+unanswerable set (e.g. SQuAD v2) is the natural next step.
+
+![Answerability gating](assets/benchmark/answerability-gating.svg)
 
 ## Bonus: tool-calling governance (Jev vs Laya vs an LLM)
 
